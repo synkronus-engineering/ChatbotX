@@ -40,6 +40,11 @@ COPY --from=pre /app/out/full/ .
 ENV BETTER_AUTH_SECRET="docker-build-time-placeholder-not-used-at-runtime-0"
 ENV BETTER_AUTH_URL="http://localhost:3000"
 
+# Bake the edition into the client bundle: Next inlines NEXT_PUBLIC_* at build
+# time, so a runtime env alone leaves community baked client-side (workspace
+# creation UI stays hidden). Server side reads the runtime env regardless.
+ENV NEXT_PUBLIC_EDITION="enterprise"
+
 # - `.next/cache` cache mount: Turbopack's filesystem cache, local to the build.
 #   Not persisted across CI runs — `turbo.json` excludes `.next/cache/**` from the
 #   build outputs, so restoring it can never turn a turbo cache miss into a hit;
