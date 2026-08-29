@@ -167,6 +167,10 @@ jobs:
             image: chatbotx-javascript-executor
             dockerfile: ./apps/javascript-executor/docker/Dockerfile
             runner: ubuntu-latest
+          - label: console
+            image: chatbotx-console
+            dockerfile: ./apps/console/docker/Dockerfile
+            runner: ubuntu-latest
     # Baseline builder leg was ~16 min and the others ~1-2 min. Bounds a hung
     # build, and an unprovisioned `runner` label, against the 24-hour default.
     timeout-minutes: 45
