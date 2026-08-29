@@ -11,10 +11,8 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@chatbotx.io/database": "workspace:*",
-    "@chatbotx.io/slice-tenancy": "workspace:*",
-    "@chatbotx.io/utils": "workspace:*",
     "next": "^16",
+    "pg": "^8",
     "react": "^19",
     "react-dom": "^19"
   },
@@ -25,6 +23,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "typescript": "^5",
-    "vitest": "^4.1.0"
+    "vitest": "^4.1.0",
+    "@types/pg": "^8"
   }
 }
