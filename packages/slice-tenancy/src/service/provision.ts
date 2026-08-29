@@ -1,14 +1,9 @@
-import { db } from "@chatbotx.io/database/client"
-import { workspaceMetaModel } from "../data/schema"
+import { db, sql } from "@chatbotx.io/database/client"
 
 /**
  * E1 workspace provisioning — creates Workspaces through the MIT-zone
- * workspaceService seam (community: 1 workspace per owner, which maps
- * exactly to our 1-workspace-per-tenant model). Records our ent.workspace_meta
- * overlay for plan/locale/suspension state.
- *
- * The provisioning actor is the platform admin (PLATFORM_ADMIN_EMAIL);
- * the workspace owner is the tenant's designated user.
+ * workspaceService seam (community: 1 workspace per owner = 1 tenant).
+ * Records our ent.workspace_meta overlay for plan/locale/suspension.
  */
 export type ProvisionInput = {
   ownerEmail: string
@@ -27,41 +22,69 @@ export const provisionWorkspace = async (
 ): Promise<ProvisionResult> => {
   const { ownerEmail, name, plan = "free", locale = "es" } = input
 
-  // TODO(Task 4 impl): wire to workspaceService.create via the MIT seam.
-  // The service-level community limit (1 workspace/owner) enforces our
-  // 1-workspace-per-tenant model — no additional quota check needed.
-  //
-  // Flow:
-  // 1. Find or invite the owner user by email (auth-service seam)
-  // 2. workspaceService.create({ data: { name, ownerId }, createdBy: ADMIN })
-  // 3. Insert ent.workspace_meta { workspaceId, plan, locale }
-  // 4. Emit event: workspace.provisioned
-  //
-  // Implementation requires the auth-user lookup seam, which is Task 4's
-  // next increment. The migration (Task 2) and isolation suite (Task 3)
-  // are the gates that unblock this body.
-  await Promise.resolve()
-  throw new Error(
-    `provisionWorkspace(${ownerEmail}, ${name}, ${plan}, ${locale}): Task 4 — auth-user seam wiring pending`,
+  const owner = await db.query.userModel.findFirst({
+    where: { email: ownerEmail },
+    columns: { id: true },
+  })
+
+  if (!owner) {
+    throw new Error(
+      `Owner ${ownerEmail} not found — invite them first (console panel sends invite)`,
+    )
+  }
+
+  // Community limit: 1 workspace per owner (= 1 tenant per customer)
+  const owned = await db.query.workspaceModel.findFirst({
+    where: { ownerId: owner.id },
+    columns: { id: true },
+  })
+
+  if (owned) {
+    return { workspaceId: owned.id, created: false }
+  }
+
+  // Create workspace via the app-level service (sets owner membership,
+  // resolves tenantId, consumes quota)
+  const { workspaceService } = await import("@chatbotx.io/business")
+  const workspace = await workspaceService.create({
+    data: { name, ownerId: owner.id },
+    createdBy: owner.id,
+  })
+
+  // Record our overlay in ent.workspace_meta
+  await db.execute(
+    sql`INSERT INTO ent.workspace_meta (workspace_id, plan, locale)
+        VALUES (${workspace.id}, ${plan}, ${locale})
+        ON CONFLICT DO NOTHING`,
   )
+
+  return { workspaceId: workspace.id, created: true }
 }
 
-export const suspendWorkspace = async (workspaceId: string): Promise<void> => {
-  await db
-    .update(workspaceMetaModel)
-    .set({ suspendedAt: new Date() })
-    .where(eqWorkspace(workspaceId))
+export const suspendWorkspace = async (
+  workspaceId: string,
+): Promise<void> => {
+  await db.execute(
+    sql`UPDATE ent.workspace_meta SET suspended_at = now() WHERE workspace_id = ${workspaceId}`,
+  )
 }
 
 export const reactivateWorkspace = async (
   workspaceId: string,
 ): Promise<void> => {
-  await db
-    .update(workspaceMetaModel)
-    .set({ suspendedAt: null })
-    .where(eqWorkspace(workspaceId))
+  await db.execute(
+    sql`UPDATE ent.workspace_meta SET suspended_at = NULL WHERE workspace_id = ${workspaceId}`,
+  )
 }
 
-import { eq } from "drizzle-orm"
-
-const eqWorkspace = (id: string) => eq(workspaceMetaModel.workspaceId, id)
+export const listWorkspaces = async () => {
+  const result = await db.execute(
+    sql`SELECT wm.workspace_id, wm.plan, wm.locale, wm.suspended_at,
+               w.name, u.email as owner_email
+        FROM ent.workspace_meta wm
+        JOIN "Workspace" w ON w.id = wm.workspace_id
+        JOIN "User" u ON u.id = w.owner_id
+        ORDER BY w.name`,
+  )
+  return result.rows
+}
