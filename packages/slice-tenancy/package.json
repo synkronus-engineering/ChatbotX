@@ -6,7 +6,19 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@chatbotx.io/database": "workspace:*",
+    "@chatbotx.io/utils": "workspace:*",
+    "drizzle-orm": "1.0.0-beta.22"
+  },
+  "devDependencies": {
+    "@chatbotx.io/typescript-config": "workspace:*",
+    "@chatbotx.io/vitest-config": "workspace:*",
+    "@types/node": "^24.10.4",
+    "typescript": "^5",
+    "vitest": "^4.1.0"
   }
 }

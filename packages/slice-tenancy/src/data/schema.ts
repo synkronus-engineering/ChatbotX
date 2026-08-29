@@ -1,4 +1,7 @@
-import { bigintAsString, pgSchema, text, timestamp } from "drizzle-orm/pg-core"
+import { bigintAsString, timestampConfig } from "@chatbotx.io/database/partials"
+import { workspaceModel } from "@chatbotx.io/database/schema"
+import { createId } from "@chatbotx.io/utils"
+import { pgSchema, text, timestamp } from "drizzle-orm/pg-core"
 
 /**
  * Konversify enterprise layer — tenancy spine (E1).
@@ -11,14 +14,27 @@ import { bigintAsString, pgSchema, text, timestamp } from "drizzle-orm/pg-core"
 export const ent = pgSchema("ent")
 
 export const workspaceMetaModel = ent.table("workspace_meta", {
-  workspaceId: bigintAsString("workspace_id").primaryKey(),
+  workspaceId: bigintAsString()
+    .primaryKey()
+    .references(() => workspaceModel.id, {
+      onDelete: "cascade",
+      onUpdate: "cascade",
+    }),
   plan: text().notNull().default("free"),
   locale: text().notNull().default("es"),
-  suspendedAt: timestamp("suspended_at", { withTimezone: true }),
+  suspendedAt: timestamp(timestampConfig),
 })
 
 export const isolationProbeModel = ent.table("isolation_probe", {
-  id: bigintAsString("id").primaryKey().generatedAlwaysAsIdentity(),
-  workspaceId: bigintAsString("workspace_id").notNull(),
+  id: bigintAsString()
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  workspaceId: bigintAsString()
+    .notNull()
+    .references(() => workspaceModel.id, {
+      onDelete: "cascade",
+      onUpdate: "cascade",
+    }),
   payload: text().notNull(),
+  createdAt: timestamp(timestampConfig).defaultNow().notNull(),
 })

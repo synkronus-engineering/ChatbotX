@@ -1,2 +1,6 @@
-export { workspaceMetaModel, isolationProbeModel } from "./data/schema"
-export { provisionWorkspace, suspendWorkspace, reactivateWorkspace } from "./service/provision"
+export { isolationProbeModel, workspaceMetaModel } from "./data/schema"
+export {
+  provisionWorkspace,
+  reactivateWorkspace,
+  suspendWorkspace,
+} from "./service/provision"
