@@ -39,6 +39,7 @@
     "@chatbotx.io/partysocket-config": "workspace:*",
     "@chatbotx.io/redis": "workspace:*",
     "@chatbotx.io/sdk": "workspace:*",
+    "@chatbotx.io/slice-plans": "workspace:*",
     "@chatbotx.io/sequence-scheduler": "workspace:*",
     "@chatbotx.io/utils": "workspace:*",
     "@chatbotx.io/worker-config": "workspace:*",

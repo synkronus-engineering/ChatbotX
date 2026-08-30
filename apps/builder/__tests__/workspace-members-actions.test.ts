@@ -45,6 +45,15 @@ const {
   }
 })
 
+vi.mock("@chatbotx.io/slice-plans", () => {
+  class PlanCapacityError extends Error {}
+  return {
+    PlanCapacityError,
+    assertChannelCapacity: vi.fn(async () => undefined),
+    assertMemberCapacity: vi.fn(async () => undefined),
+    assertWorkspaceCapacity: vi.fn(async () => undefined),
+  }
+})
 vi.mock("@/lib/safe-action", () => {
   const chain: Record<string, unknown> = {}
   chain.bindArgsSchemas = () => chain

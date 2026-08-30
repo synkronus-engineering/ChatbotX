@@ -17,6 +17,10 @@ import type {
   InboxWithIntegrations,
 } from "@chatbotx.io/database/types"
 import { getPaginationWithDefaults } from "@chatbotx.io/database/utils"
+import {
+  assertChannelCapacity,
+  PlanCapacityError,
+} from "@chatbotx.io/slice-plans"
 import { createId } from "@chatbotx.io/utils"
 import { BaseService } from "../base.service"
 import { channelLimitReachedException } from "../errors"
@@ -209,6 +213,17 @@ class InboxService extends BaseService {
         return { inbox: updated, wasCreated: true }
       }
       return { inbox: existing, wasCreated: false }
+    }
+
+    // Konversify plan gate (S1-AUDIT V5): ent-plan channel ceiling checked
+    // alongside the vendor quota gate below.
+    try {
+      await assertChannelCapacity(data.workspaceId)
+    } catch (err) {
+      if (err instanceof PlanCapacityError) {
+        throw channelLimitReachedException()
+      }
+      throw err
     }
 
     const consumed = await quotaEnforcementService.tryConsume({

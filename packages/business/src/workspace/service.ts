@@ -15,6 +15,10 @@ import {
 } from "@chatbotx.io/database/schema"
 import type { WorkspaceModel } from "@chatbotx.io/database/types"
 import { distributedLock, withCache } from "@chatbotx.io/redis"
+import {
+  assertWorkspaceCapacity,
+  PlanCapacityError,
+} from "@chatbotx.io/slice-plans"
 import { formatInTimeZone } from "date-fns-tz"
 import { BaseService } from "../base.service"
 import { tenantService } from "../enterprise/tenant/service"
@@ -400,6 +404,17 @@ class WorkspaceService extends BaseService {
     // its own transaction that later rolls back (e.g. a channel connect action),
     // the workspace seat is not released with it. Scheduled reconcile is the
     // backstop that re-grounds counts in that case.
+    // Konversify plan gate (S1-AUDIT V4): mirrors the vendor gate below with
+    // ent-plan limits — our free/pro ceilings apply regardless of edition.
+    try {
+      await assertWorkspaceCapacity(props.data.ownerId ?? props.createdBy)
+    } catch (err) {
+      if (err instanceof PlanCapacityError) {
+        throw workspaceLimitReachedException()
+      }
+      throw err
+    }
+
     const consumed = await quotaEnforcementService.tryConsume({
       userId: props.createdBy,
       metric: "workspaces",

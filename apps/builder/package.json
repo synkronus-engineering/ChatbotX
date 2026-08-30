@@ -64,6 +64,8 @@
     "@chatbotx.io/redis": "workspace:*",
     "@chatbotx.io/scheduler": "workspace:*",
     "@chatbotx.io/sdk": "workspace:*",
+    "@chatbotx.io/slice-plans": "workspace:*",
+    "@chatbotx.io/slice-tenancy": "workspace:*",
     "@chatbotx.io/sequence-scheduler": "workspace:*",
     "@chatbotx.io/slice-tenancy": "workspace:*",
     "@chatbotx.io/tool-embed": "workspace:*",
