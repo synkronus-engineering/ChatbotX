@@ -73,4 +73,4 @@ export const env = createEnv({
 
 export const isEnterprise = () => env.NEXT_PUBLIC_EDITION === "enterprise"
 export const isCloud = () => env.NEXT_PUBLIC_EDITION === "cloud"
-export const isCommunity = () => env.NEXT_PUBLIC_EDITION === "community"
+export const isCommunity = () => false
