@@ -17,6 +17,14 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/console/node_modules ./apps/console/node_modules
+# Workspace packages resolve their own third-party deps from
+# packages/*/node_modules (pnpm's per-package layout). Next's build typecheck
+# follows app imports into package sources (vitest.config.ts →
+# @chatbotx.io/vitest-config), so without this carry-over those imports hit
+# modules that exist neither in the app's nor the root's node_modules.
+# `COPY . .` below merges over it — the context's **/node_modules
+# dockerignore means it never overwrites these installs.
+COPY --from=deps /app/packages ./packages
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV DATABASE_URL="postgres://placeholder:placeholder@localhost:5432/placeholder"
