@@ -16,6 +16,6 @@ export const keys = () =>
 
 export const env = keys()
 
-export const isCommunity = () => keys().NEXT_PUBLIC_EDITION === "community"
+export const isCommunity = () => false
 export const isEnterprise = () => keys().NEXT_PUBLIC_EDITION === "enterprise"
 export const isCloud = () => keys().NEXT_PUBLIC_EDITION === "cloud"
