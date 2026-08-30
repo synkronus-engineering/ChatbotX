@@ -19,6 +19,12 @@ export const env = createEnv({
     BETTER_AUTH_URL: z.url(),
     LICENSE_KEY: z.string().optional(),
     WHATSAPP_OVERRIDE_CALLBACK_URI: z.url().optional(),
+    // Konversify tool suite (contract 4): base URLs of the embedded tools. Each
+    // is optional — a tool with no URL is hidden from the sidebar and its route
+    // 404s, so upstream/self-hosted builds see no change.
+    TOOL_BOOKING_URL: z.url().optional(),
+    TOOL_CRM_URL: z.url().optional(),
+    TOOL_SOCIAL_URL: z.url().optional(),
   },
   client: {
     NEXT_PUBLIC_BUILDER_URL: z.url(),

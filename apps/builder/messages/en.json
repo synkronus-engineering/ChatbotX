@@ -149,6 +149,14 @@
     "restore": "Restore",
     "loadMore": "Load more"
   },
+  "dashboard": {
+    "title": "Overview",
+    "chats7d": "Chats (7 days)",
+    "messages7d": "Messages (7 days)",
+    "channels": "Connected channels",
+    "plan": "Plan",
+    "quickActions": "Quick actions"
+  },
   "errors": {
     "superAdminRequired": "You need to be a workspace super admin to do this."
   },
@@ -4083,7 +4091,10 @@
     "afterText": "After"
   },
   "tools": {
-    "title": "Tools"
+    "title": "Tools",
+    "booking": "Booking",
+    "crm": "CRM",
+    "social": "Social"
   },
   "aiProviders": {
     "openai": "OpenAI",

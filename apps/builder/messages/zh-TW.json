@@ -1,4 +1,12 @@
 {
+  "dashboard": {
+    "title": "概覽",
+    "chats7d": "會話（7天）",
+    "messages7d": "訊息（7天）",
+    "channels": "已連接頻道",
+    "plan": "方案",
+    "quickActions": "快速操作"
+  },
   "fields": {
     "authorizedDomain": {
       "label": "已授權網域 {plural, select, 1 {} other {}}",
@@ -3959,7 +3967,10 @@
     "afterText": "之後"
   },
   "tools": {
-    "title": "工具"
+    "title": "工具",
+    "booking": "預約",
+    "crm": "CRM",
+    "social": "社交"
   },
   "aiProviders": {
     "openai": "OpenAI",

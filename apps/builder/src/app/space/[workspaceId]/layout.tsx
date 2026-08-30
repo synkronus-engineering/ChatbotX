@@ -28,6 +28,7 @@ import { hasWorkspacePermission } from "@/lib/auth/permission-routes"
 import { enforcePasswordCurrent } from "@/lib/auth/require-password-current"
 import { getCurrentUser } from "@/lib/auth/utils"
 import { buildWorkspaceQuotaMetrics } from "@/lib/quota-metrics"
+import { enabledToolKeys } from "@/lib/tools"
 import { enforceWorkspaceNotScheduledForDeletionFromRequest } from "@/lib/workspace/require-not-scheduled-for-deletion"
 import { resolveWorkspaceBlockState } from "@/lib/workspace-quota"
 
@@ -118,6 +119,7 @@ export default async function WorkspaceLayout({
         permissions={targetWorkspaceMember.permissions}
         quota={quotaSummary}
         scheduledForDeletion={scheduledForDeletion}
+        tools={enabledToolKeys()}
         workspaceId={workspaceId}
       />
       <SidebarInset>

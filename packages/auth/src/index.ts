@@ -1,3 +1,9 @@
+export {
+  DEFAULT_ACCESS_TOKEN_TTL_SECONDS,
+  isAccessTokenIdpEnabled,
+  mintWorkspaceAccessToken,
+  type WorkspaceAccessTokenInput,
+} from "./jwt"
 export type {
   Auth,
   AuthConfig,

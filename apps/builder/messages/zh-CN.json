@@ -1072,6 +1072,14 @@
       "rawGroup": "原始自订字段"
     }
   },
+  "dashboard": {
+    "title": "概览",
+    "chats7d": "会话（7天）",
+    "messages7d": "消息（7天）",
+    "channels": "已连接渠道",
+    "plan": "套餐",
+    "quickActions": "快速操作"
+  },
   "deepseek": {
     "autoReply": {
       "description": "激活人工智能自动回复，通过您的业务数据支持的人工智能自然地回复用户。",
@@ -4467,7 +4475,10 @@
     "title": "TikTok"
   },
   "tools": {
-    "title": "工具"
+    "title": "工具",
+    "booking": "预约",
+    "crm": "CRM",
+    "social": "社交"
   },
   "trigger": {
     "actions": {

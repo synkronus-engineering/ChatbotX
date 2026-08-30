@@ -65,6 +65,8 @@
     "@chatbotx.io/scheduler": "workspace:*",
     "@chatbotx.io/sdk": "workspace:*",
     "@chatbotx.io/sequence-scheduler": "workspace:*",
+    "@chatbotx.io/slice-tenancy": "workspace:*",
+    "@chatbotx.io/tool-embed": "workspace:*",
     "@chatbotx.io/ui": "workspace:*",
     "@chatbotx.io/utils": "workspace:*",
     "@chatbotx.io/variables": "workspace:*",

@@ -149,6 +149,14 @@
     "restore": "שחזור",
     "loadMore": "Load more"
   },
+  "dashboard": {
+    "title": "סקירה כללית",
+    "chats7d": "צ'אטים (7 ימים)",
+    "messages7d": "הודעות (7 ימים)",
+    "channels": "ערוצים מחוברים",
+    "plan": "תוכנית",
+    "quickActions": "פעולות מהירות"
+  },
   "errors": {
     "superAdminRequired": "עליכם להיות מנהל-על של סביבת העבודה כדי לבצע פעולה זו."
   },
@@ -2154,7 +2162,10 @@
     "afterText": "אחרי"
   },
   "tools": {
-    "title": "כלים"
+    "title": "כלים",
+    "booking": "הזמנות",
+    "crm": "CRM",
+    "social": "רשתות חברתיות"
   },
   "aiProviders": {
     "openai": "OpenAI",

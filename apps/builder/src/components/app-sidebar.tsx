@@ -10,12 +10,15 @@ import {
 import {
   AtomIcon,
   BrainIcon,
+  CalendarDaysIcon,
   ChartPieIcon,
   ChevronsRight,
+  ContactRoundIcon,
   LightbulbIcon,
   type LucideIcon,
   MessageCircleMoreIcon,
   RadioIcon,
+  Share2Icon,
   SlidersHorizontalIcon,
   UsersIcon,
   WebhookIcon,
@@ -40,6 +43,7 @@ import {
   PERMISSION_NAV,
   type WorkspacePermissionKey,
 } from "@/lib/auth/permission-routes"
+import type { ToolKey } from "@/lib/tools"
 
 type SidebarNavItem = {
   title: string
@@ -50,6 +54,13 @@ type SidebarNavItem = {
 
 const SETTINGS_GENERAL_URL_SEGMENT = "/settings/general"
 
+/** Konversify tool suite entries (contract 4) — URL-gated server-side. */
+const TOOL_NAV: Record<ToolKey, LucideIcon> = {
+  booking: CalendarDaysIcon,
+  crm: ContactRoundIcon,
+  social: Share2Icon,
+}
+
 export function AppSidebar({
   workspaceId,
   allWorkspaces,
@@ -57,6 +68,7 @@ export function AppSidebar({
   isPlatformAdmin,
   permissions,
   quota,
+  tools = [],
   scheduledForDeletion = false,
   ...props
 }: ComponentProps<typeof Sidebar> & {
@@ -68,6 +80,8 @@ export function AppSidebar({
   // `hasWorkspacePermission` fails closed on any missing flag.
   permissions: WorkspaceMemberPermissions
   quota: QuotaSummary
+  /** Tools with a configured base URL; empty upstream (all envs unset). */
+  tools?: ToolKey[]
   scheduledForDeletion?: boolean
 }) {
   const t = useTranslations()
@@ -170,6 +184,21 @@ export function AppSidebar({
         !item.url.endsWith(SETTINGS_GENERAL_URL_SEGMENT),
     }))
 
+  const toolTitles: Record<ToolKey, string> = {
+    booking: t("tools.booking"),
+    crm: t("tools.crm"),
+    social: t("tools.social"),
+  }
+  // Tool suite entries share the Tools list's `flows` gate.
+  const toolItems = hasWorkspacePermission(permissions, PERMISSION_NAV.flows)
+    ? tools.map((tool) => ({
+        title: toolTitles[tool],
+        url: `/space/${workspaceId}/${tool}`,
+        icon: TOOL_NAV[tool],
+        disabled: scheduledForDeletion,
+      }))
+    : []
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader className="gap-0 px-0 py-0">
@@ -188,6 +217,13 @@ export function AppSidebar({
           disabledTooltip={t("workspace.deletion.navDisabledTooltip")}
           items={navMain}
         />
+        {toolItems.length > 0 && (
+          <NavMain
+            disabledTooltip={t("workspace.deletion.navDisabledTooltip")}
+            items={toolItems}
+            label={t("tools.title")}
+          />
+        )}
       </SidebarContent>
       <SidebarFooter>
         <NavUsage

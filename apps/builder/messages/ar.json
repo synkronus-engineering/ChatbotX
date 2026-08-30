@@ -149,6 +149,14 @@
     "restore": "استعادة",
     "loadMore": "Load more"
   },
+  "dashboard": {
+    "title": "نظرة عامة",
+    "chats7d": "المحادثات (7 أيام)",
+    "messages7d": "الرسائل (7 أيام)",
+    "channels": "القنوات المتصلة",
+    "plan": "الخطة",
+    "quickActions": "إجراءات سريعة"
+  },
   "errors": {
     "superAdminRequired": "يجب أن تكون مسؤولًا فائقًا لمساحة العمل للقيام بذلك."
   },
@@ -3926,7 +3934,10 @@
     "afterText": "بعد"
   },
   "tools": {
-    "title": "الأدوات"
+    "title": "الأدوات",
+    "booking": "الحجوزات",
+    "crm": "CRM",
+    "social": "التواصل الاجتماعي"
   },
   "aiProviders": {
     "openai": "OpenAI",

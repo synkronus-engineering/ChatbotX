@@ -43,6 +43,7 @@ vi.mock("@chatbotx.io/database/client", () => ({
 
 vi.mock("@chatbotx.io/database/schema", () => ({
   accountModel: {},
+  jwkModel: {},
   sessionModel: {},
   userModel: {},
   verificationModel: {},

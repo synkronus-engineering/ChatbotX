@@ -149,6 +149,14 @@
     "restore": "Palauta",
     "loadMore": "Load more"
   },
+  "dashboard": {
+    "title": "Yleiskatsaus",
+    "chats7d": "Keskustelut (7 päivää)",
+    "messages7d": "Viestit (7 päivää)",
+    "channels": "Yhdistetyt kanavat",
+    "plan": "Paketti",
+    "quickActions": "Pikatoiminnot"
+  },
   "errors": {
     "superAdminRequired": "Sinun täytyy olla työtilan pääylläpitäjä tehdäksesi tämän."
   },
@@ -3926,7 +3934,10 @@
     "afterText": "Jälkeen"
   },
   "tools": {
-    "title": "Työkalut"
+    "title": "Työkalut",
+    "booking": "Varaukset",
+    "crm": "CRM",
+    "social": "Social"
   },
   "aiProviders": {
     "openai": "OpenAI",

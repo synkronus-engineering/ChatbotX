@@ -6,6 +6,7 @@ import {
 import { db } from "@chatbotx.io/database/client"
 import {
   accountModel,
+  jwkModel,
   ROOT_TENANT_ID,
   sessionModel,
   userModel,
@@ -21,11 +22,12 @@ import {
 } from "@chatbotx.io/mail"
 import type { SmtpTransportOptions } from "@chatbotx.io/mail/transport"
 import { createId, getPublicOriginFromRequest } from "@chatbotx.io/utils"
-import { APIError, betterAuth } from "better-auth"
+import { APIError, type BetterAuthOptions, betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { nextCookies } from "better-auth/next-js"
 import { anonymous, bearer, magicLink, oneTimeToken } from "better-auth/plugins"
 import { PHASE_PRODUCTION_BUILD } from "next/constants"
+import { resolveJwtPlugin } from "./jwt"
 import { env, getBrokerUrl } from "./keys"
 import { logger } from "./logger"
 import { getTenantId, resolveTenantOwnerId } from "./tenant-context"
@@ -464,7 +466,103 @@ export function createAuth(config: AuthConfig) {
     config.socialRedirectOrigin,
   )
 
-  return betterAuth({
+  // Konversify access-token IdP (contract 1). `null` when the issuer/audience
+  // envs are unset, so upstream/self-hosted instances never load the plugin.
+  const jwtPlugin = resolveJwtPlugin()
+
+  // `as const` keeps the tuple type better-auth's plugin inference requires —
+  // a plain array (or a conditionally-spread element) degrades the inferred
+  // session/user types to the plugin-less baseline.
+  const corePlugins = [
+    magicLink({
+      sendMagicLink: async ({ email, url }, request) => {
+        if (!request) {
+          throw new APIError(400, {
+            message: "Unknown request",
+          })
+        }
+
+        const [originUrl, platformInfo, smtpResolution] = await Promise.all([
+          getPublicOriginFromRequest(request as unknown as Request),
+          getTenantSettings(request as unknown as Request),
+          resolveSmtpForTenant(),
+        ])
+
+        if (smtpResolution.kind === "blocked") {
+          return
+        }
+
+        const magicUrl = new URL(url)
+        magicUrl.hostname = new URL(originUrl).hostname
+
+        const {
+          name: brandName,
+          logoLightUrl,
+          magicLinkEmailTemplate,
+        } = platformInfo
+
+        const tenantId = getTenantId()
+        // Match the tenant's users by email, plus the reseller-owner on their
+        // own custom domain (the owner's account lives in the root tenant, so
+        // the owner arm is constrained to it). Mirrors the findOne
+        // reseller-owner fallback above (`ownerRootClauses`).
+        //
+        // NOTE: this only gates whether a link is *sent*. The token better-auth
+        // stores in `Verification` carries no tenant, so a token issued in one
+        // tenant and replayed (with the host rewritten) against another tenant's
+        // domain would verify under that other tenant. Closing this fully needs a
+        // tenant-scoped verification lookup, which better-auth doesn't expose as a
+        // hook today. Practical exploit requires intercepting the victim's email.
+        // See docs/tenancy.md → "Residual security considerations".
+        const ownerId = await resolveTenantOwnerId(tenantId)
+        const user = await db.query.userModel.findFirst({
+          where: {
+            email,
+            OR: [
+              { tenantId },
+              ...(ownerId ? [{ id: ownerId, tenantId: ROOT_TENANT_ID }] : []),
+            ],
+          },
+        })
+        if (!user) {
+          throw new APIError(400, {
+            message: `Your email is not registered with ${brandName}`,
+          })
+        }
+
+        const props = {
+          brandName,
+          brandLogoUrl: logoLightUrl,
+          brandUrl: new URL("/", originUrl).toString(),
+          subject: DEFAULT_MAGIC_LINK_SUBJECT,
+          userName: user.name ?? email,
+          magicUrl: magicUrl.toString(),
+          customTemplate: magicLinkEmailTemplate,
+        }
+        if (smtpResolution.kind === "transport") {
+          await sendMagicLink(email, props, smtpResolution.transport)
+        } else {
+          await sendMagicLink(email, props)
+        }
+      },
+    }),
+    oneTimeToken(),
+    // Enables mobile (bearer-only) clients: a before-hook rewrites
+    // `Authorization: Bearer <token>` into the session cookie header, and an
+    // after-hook mirrors session Set-Cookie into a `set-auth-token` response
+    // header. Since it rewrites `context.headers`, `auth.api.getSession`
+    // (and everything built on it — oRPC, authMiddleware) works unchanged.
+    bearer(),
+    anonymous({
+      emailDomainName: "anonymous.example.com",
+      generateName: () => `Anonymous ${createId()}`,
+    }),
+  ] as const
+
+  // `satisfies` keeps the literal (inferred) property types betterAuth's
+  // generic return-type inference needs, while restoring contextual typing for
+  // the email callback parameters that a detached object literal would lose.
+  const baseConfig = {
     databaseHooks: buildDatabaseHooks({
       onUserCreated: config.onUserCreated,
       upgradeOAuthAccount: config.upgradeOAuthAccount,
@@ -477,6 +575,10 @@ export function createAuth(config: AuthConfig) {
           verification: verificationModel,
           session: sessionModel,
           account: accountModel,
+          // Key storage for the `jwt` plugin (ES256 keypairs it generates and
+          // rotates itself). The table pre-exists upstream; unmapped, the
+          // plugin's jwks reads/writes would fail to resolve a drizzle table.
+          jwks: jwkModel,
         },
       }),
     ),
@@ -629,96 +731,6 @@ export function createAuth(config: AuthConfig) {
         }
       },
     },
-    plugins: [
-      magicLink({
-        sendMagicLink: async ({ email, url }, request) => {
-          if (!request) {
-            throw new APIError(400, {
-              message: "Unknown request",
-            })
-          }
-
-          const [originUrl, platformInfo, smtpResolution] = await Promise.all([
-            getPublicOriginFromRequest(request as unknown as Request),
-            getTenantSettings(request as unknown as Request),
-            resolveSmtpForTenant(),
-          ])
-
-          if (smtpResolution.kind === "blocked") {
-            return
-          }
-
-          const magicUrl = new URL(url)
-          magicUrl.hostname = new URL(originUrl).hostname
-
-          const {
-            name: brandName,
-            logoLightUrl,
-            magicLinkEmailTemplate,
-          } = platformInfo
-
-          const tenantId = getTenantId()
-          // Match the tenant's users by email, plus the reseller-owner on their
-          // own custom domain (the owner's account lives in the root tenant, so
-          // the owner arm is constrained to it). Mirrors the findOne
-          // reseller-owner fallback above (`ownerRootClauses`).
-          //
-          // NOTE: this only gates whether a link is *sent*. The token better-auth
-          // stores in `Verification` carries no tenant, so a token issued in one
-          // tenant and replayed (with the host rewritten) against another tenant's
-          // domain would verify under that other tenant. Closing this fully needs a
-          // tenant-scoped verification lookup, which better-auth doesn't expose as a
-          // hook today. Practical exploit requires intercepting the victim's email.
-          // See docs/tenancy.md → "Residual security considerations".
-          const ownerId = await resolveTenantOwnerId(tenantId)
-          const user = await db.query.userModel.findFirst({
-            where: {
-              email,
-              OR: [
-                { tenantId },
-                ...(ownerId ? [{ id: ownerId, tenantId: ROOT_TENANT_ID }] : []),
-              ],
-            },
-          })
-          if (!user) {
-            throw new APIError(400, {
-              message: `Your email is not registered with ${brandName}`,
-            })
-          }
-
-          const props = {
-            brandName,
-            brandLogoUrl: logoLightUrl,
-            brandUrl: new URL("/", originUrl).toString(),
-            subject: DEFAULT_MAGIC_LINK_SUBJECT,
-            userName: user.name ?? email,
-            magicUrl: magicUrl.toString(),
-            customTemplate: magicLinkEmailTemplate,
-          }
-          if (smtpResolution.kind === "transport") {
-            await sendMagicLink(email, props, smtpResolution.transport)
-          } else {
-            await sendMagicLink(email, props)
-          }
-        },
-      }),
-      oneTimeToken(),
-      // Enables mobile (bearer-only) clients: a before-hook rewrites
-      // `Authorization: Bearer <token>` into the session cookie header, and an
-      // after-hook mirrors session Set-Cookie into a `set-auth-token` response
-      // header. Since it rewrites `context.headers`, `auth.api.getSession`
-      // (and everything built on it — oRPC, authMiddleware) works unchanged.
-      bearer(),
-      anonymous({
-        emailDomainName: "anonymous.example.com",
-        generateName: () => `Anonymous ${createId()}`,
-      }),
-      // Relays better-auth's Set-Cookie into the Next.js response. Required so a
-      // server-side `auth.api.changePassword` (with `revokeOtherSessions`) rotates
-      // the caller's session cookie instead of silently logging them out. Must be
-      // the LAST plugin so it runs after every other plugin's cookie writes.
-      nextCookies(),
-    ],
     session: {
       cookieCache: {
         enabled: true,
@@ -730,6 +742,16 @@ export function createAuth(config: AuthConfig) {
       database: {
         generateId: "serial",
       },
+      // Contract 2: share the session cookie across *.konversify.app tool
+      // subdomains. Only applied when AUTH_COOKIE_DOMAIN is set — otherwise the
+      // host-only default keeps localhost and single-domain deploys working
+      // (a Domain cookie on localhost would be silently dropped by browsers).
+      ...(env.AUTH_COOKIE_DOMAIN && {
+        crossSubDomainCookies: {
+          enabled: true,
+          domain: env.AUTH_COOKIE_DOMAIN,
+        },
+      }),
     },
     trustedOrigins: async () => {
       // better-auth resolves the function form of `trustedOrigins` once at
@@ -759,6 +781,23 @@ export function createAuth(config: AuthConfig) {
         ]),
       )
     },
+  } satisfies BetterAuthOptions
+
+  // Two separate betterAuth calls (rather than a conditional spread) so each
+  // plugins array keeps its tuple type and session/user inference holds. In
+  // both branches the cookie-relay plugin (`nextCookies` — it mirrors
+  // better-auth's Set-Cookie into the Next.js response, e.g. for a server-side
+  // `changePassword`) stays last so it runs after every other plugin's cookie
+  // writes.
+  if (jwtPlugin) {
+    return betterAuth({
+      ...baseConfig,
+      plugins: [jwtPlugin, ...corePlugins, nextCookies()],
+    })
+  }
+  return betterAuth({
+    ...baseConfig,
+    plugins: [...corePlugins, nextCookies()],
   })
 }
 

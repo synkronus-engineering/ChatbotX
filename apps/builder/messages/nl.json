@@ -149,6 +149,14 @@
     "restore": "Herstellen",
     "loadMore": "Load more"
   },
+  "dashboard": {
+    "title": "Overzicht",
+    "chats7d": "Chats (7 dagen)",
+    "messages7d": "Berichten (7 dagen)",
+    "channels": "Verbonden kanalen",
+    "plan": "Abonnement",
+    "quickActions": "Snelle acties"
+  },
   "errors": {
     "superAdminRequired": "Je moet superbeheerder van de werkruimte zijn om dit te doen."
   },
@@ -3926,7 +3934,10 @@
     "afterText": "Na"
   },
   "tools": {
-    "title": "Hulpmiddelen"
+    "title": "Hulpmiddelen",
+    "booking": "Boekingen",
+    "crm": "CRM",
+    "social": "Social"
   },
   "aiProviders": {
     "openai": "OpenAI",
