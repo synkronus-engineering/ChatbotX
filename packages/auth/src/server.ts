@@ -765,6 +765,11 @@ export function createAuth(config: AuthConfig) {
         // Mobile app deep-link scheme (chatbotx-mobile-app) — social sign-in relays back into the
         // app via this custom scheme instead of an https:// origin.
         "chatconnectxapp://",
+        // Marketing landing posting cross-origin auth calls into this API
+        // (konversify.app sign-in/sign-up forms). Absent in upstream deploys.
+        ...(env.AUTH_TRUSTED_LANDING_URL
+          ? [env.AUTH_TRUSTED_LANDING_URL]
+          : []),
       ]
       if (process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD) {
         return Array.from(new Set(staticOrigins))
