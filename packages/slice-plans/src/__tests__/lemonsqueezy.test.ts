@@ -9,6 +9,8 @@ import {
 
 const SECRET = "test-webhook-secret"
 
+const FALLBACK_EVENT_ID = /^ls-/
+
 const sign = (body: string): string =>
   createHmac("sha256", SECRET).update(body).digest("hex")
 
@@ -77,14 +79,17 @@ describe("parseWebhookEvent", () => {
   })
 
   it("derives a stable event id when webhook_id is absent", () => {
-    const payload = JSON.parse(subscriptionPayload({})) as {
-      meta: Record<string, unknown>
-    }
-    delete payload.meta.webhook_id
-    const body = JSON.stringify(payload)
+    const body = JSON.stringify({
+      meta: { event_name: "subscription_created" },
+      data: {
+        type: "subscriptions",
+        id: "sub-1",
+        attributes: { status: "active" },
+      },
+    })
     const first = parseWebhookEvent(body)
     const second = parseWebhookEvent(body)
-    expect(first.eventId).toMatch(/^ls-/)
+    expect(FALLBACK_EVENT_ID.test(first.eventId)).toBe(true)
     expect(first.eventId).toBe(second.eventId)
   })
 

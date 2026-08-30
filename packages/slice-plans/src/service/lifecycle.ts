@@ -4,6 +4,7 @@ import { PLAN_KEYS } from "../data/plans"
 import {
   lsEventModel,
   planModel,
+  type SubscriptionStatus,
   tenantSubscriptionModel,
 } from "../data/schema"
 import type { ParsedWebhookEvent } from "../types/providers"
@@ -60,6 +61,30 @@ function toDate(value: unknown): Date | null {
   return typeof value === "string" && value ? new Date(value) : null
 }
 
+function variantIdFrom(attributes: Record<string, unknown>): string | null {
+  if (typeof attributes.variant === "number") {
+    return String(attributes.variant)
+  }
+  if (typeof attributes.variant === "string") {
+    return attributes.variant
+  }
+  return null
+}
+
+// BaseLine's cancel semantics: `subscription_cancelled` means cancel-at-
+// period-end — entitlement continues ("active") until LS sends the terminal
+// `subscription_expired`, which is the only path that stores "expired".
+// The "canceled" enum value stays reserved for admin-forced cancels.
+function effectiveStatusFrom(
+  status: SubscriptionStatus,
+  cancelledAt: Date | null,
+): SubscriptionStatus {
+  if (cancelledAt) {
+    return status === "expired" ? "expired" : "active"
+  }
+  return status
+}
+
 /**
  * Applies a lifecycle event to `ent.tenant_subscription`. Status comes from
  * the payload's LS status; the plan key resolves from the variant (falling
@@ -96,12 +121,7 @@ export async function applyWebhookEvent(
   const attributes = event.attributes
   const lsStatus =
     typeof attributes.status === "string" ? attributes.status : null
-  const variantId =
-    typeof attributes.variant === "number"
-      ? String(attributes.variant)
-      : typeof attributes.variant === "string"
-        ? attributes.variant
-        : null
+  const variantId = variantIdFrom(attributes)
 
   let planKey: string | null = null
   if (variantId) {
@@ -117,15 +137,7 @@ export async function applyWebhookEvent(
   const cancelledAt = toDate(attributes.cancelled_at)
   const customerId = event.providerCustomerId
 
-  // BaseLine's cancel semantics: `subscription_cancelled` means cancel-at-
-  // period-end — entitlement continues ("active") until LS sends the terminal
-  // `subscription_expired`, which is the only path that stores "expired".
-  // The "canceled" enum value stays reserved for admin-forced cancels.
-  const effectiveStatus = cancelledAt
-    ? status === "expired"
-      ? "expired"
-      : "active"
-    : status
+  const effectiveStatus = effectiveStatusFrom(status, cancelledAt)
 
   await db
     .insert(tenantSubscriptionModel)

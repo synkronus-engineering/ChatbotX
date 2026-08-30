@@ -51,7 +51,7 @@ export async function getPlanByKey(key: string): Promise<PlanRecord | null> {
   return rows[0] ?? null
 }
 
-export async function listPlans(): Promise<PlanRecord[]> {
+export function listPlans(): Promise<PlanRecord[]> {
   return db.select().from(planModel).orderBy(planModel.monthlyPriceCents)
 }
 
