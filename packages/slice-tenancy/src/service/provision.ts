@@ -6,7 +6,9 @@ import { db, sql } from "@chatbotx.io/database/client"
  * Records our ent.workspace_meta overlay for plan/locale/suspension.
  */
 export type ProvisionInput = {
-  ownerEmail: string
+  ownerEmail?: string
+  /** Session-resolved owner (builder provision route); takes precedence over ownerEmail. */
+  ownerId?: string
   name: string
   plan?: string
   locale?: string
@@ -20,22 +22,28 @@ export type ProvisionResult = {
 export const provisionWorkspace = async (
   input: ProvisionInput,
 ): Promise<ProvisionResult> => {
-  const { ownerEmail, name, plan = "free", locale = "es" } = input
+  const { ownerEmail, ownerId, name, plan = "free", locale = "es" } = input
 
-  const owner = await db.query.userModel.findFirst({
-    where: { email: ownerEmail },
-    columns: { id: true },
-  })
-
-  if (!owner) {
-    throw new Error(
-      `Owner ${ownerEmail} not found — invite them first (console panel sends invite)`,
-    )
+  let ownerUserId = ownerId ?? null
+  if (!ownerUserId) {
+    if (!ownerEmail) {
+      throw new Error("provisionWorkspace requires ownerId or ownerEmail")
+    }
+    const owner = await db.query.userModel.findFirst({
+      where: { email: ownerEmail },
+      columns: { id: true },
+    })
+    ownerUserId = owner?.id ?? null
+    if (!ownerUserId) {
+      throw new Error(
+        `Owner ${ownerEmail} not found — invite them first (console panel sends invite)`,
+      )
+    }
   }
 
   // Community limit: 1 workspace per owner (= 1 tenant per customer)
   const owned = await db.query.workspaceModel.findFirst({
-    where: { ownerId: owner.id },
+    where: { ownerId: ownerUserId },
     columns: { id: true },
   })
 
@@ -47,8 +55,8 @@ export const provisionWorkspace = async (
   // resolves tenantId, consumes quota)
   const { workspaceService } = await import("@chatbotx.io/business")
   const workspace = await workspaceService.create({
-    data: { name, ownerId: owner.id },
-    createdBy: owner.id,
+    data: { name, ownerId: ownerUserId },
+    createdBy: ownerUserId,
   })
 
   // Record our overlay in ent.workspace_meta

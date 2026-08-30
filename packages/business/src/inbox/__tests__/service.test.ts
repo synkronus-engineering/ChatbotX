@@ -12,6 +12,15 @@ const mocks = vi.hoisted(() => ({
   count: vi.fn(),
 }))
 
+vi.mock("@chatbotx.io/slice-plans", () => {
+  class PlanCapacityError extends Error {}
+  return {
+    PlanCapacityError,
+    assertChannelCapacity: vi.fn(async () => undefined),
+    assertMemberCapacity: vi.fn(async () => undefined),
+    assertWorkspaceCapacity: vi.fn(async () => undefined),
+  }
+})
 vi.mock("@chatbotx.io/database/client", () => ({
   db: {
     query: {

@@ -10,6 +10,10 @@ import { ChatbotXException } from "@chatbotx.io/business/errors"
 import { db, findOrFail } from "@chatbotx.io/database/client"
 import { invitationModel } from "@chatbotx.io/database/schema"
 import { invalidateCacheByTags } from "@chatbotx.io/redis"
+import {
+  assertMemberCapacity,
+  PlanCapacityError,
+} from "@chatbotx.io/slice-plans"
 import { createId } from "@chatbotx.io/utils"
 import { getTranslations } from "next-intl/server"
 import { z } from "zod"
@@ -72,6 +76,19 @@ export const acceptInvitationAction = authActionClient
         throw new ChatbotXException(
           "Team member limit reached for this workspace plan",
         )
+      }
+
+      // Konversify plan gate (S1-AUDIT V6): re-check the ent-plan ceiling on
+      // acceptance, mirroring the vendor's double-sided gate.
+      try {
+        await assertMemberCapacity(invitation.workspaceId)
+      } catch (err) {
+        if (err instanceof PlanCapacityError) {
+          throw new ChatbotXException(
+            "Team member limit reached for this workspace plan",
+          )
+        }
+        throw err
       }
     }
 

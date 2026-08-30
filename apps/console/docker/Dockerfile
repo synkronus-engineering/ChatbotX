@@ -6,6 +6,7 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 COPY apps/console/package.json apps/console/
 COPY packages/slice-tenancy/package.json packages/slice-tenancy/
+COPY packages/slice-plans/package.json packages/slice-plans/
 COPY packages/database/package.json packages/database/
 COPY packages/business/package.json packages/business/
 COPY packages/utils/package.json packages/utils/

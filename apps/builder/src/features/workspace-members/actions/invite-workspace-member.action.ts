@@ -7,6 +7,10 @@ import {
 import { ChatbotXException } from "@chatbotx.io/business/errors"
 import { db } from "@chatbotx.io/database/client"
 import { invitationModel } from "@chatbotx.io/database/schema"
+import {
+  assertMemberCapacity,
+  PlanCapacityError,
+} from "@chatbotx.io/slice-plans"
 import { createId, SymbolicSnowflakeIDs } from "@chatbotx.io/utils"
 import { addDays } from "date-fns"
 import { isCommunity } from "@/env"
@@ -51,6 +55,19 @@ export const inviteWorkspaceMemberAction = workspaceActionClient
       throw new ChatbotXException(
         "Team member limit reached for this workspace plan",
       )
+    }
+
+    // Konversify plan gate (S1-AUDIT V6): ent-plan member ceiling alongside
+    // the vendor quota check above.
+    try {
+      await assertMemberCapacity(workspaceId)
+    } catch (err) {
+      if (err instanceof PlanCapacityError) {
+        throw new ChatbotXException(
+          "Team member limit reached for this workspace plan",
+        )
+      }
+      throw err
     }
 
     return await db
