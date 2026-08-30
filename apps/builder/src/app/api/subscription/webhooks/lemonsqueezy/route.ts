@@ -1,3 +1,4 @@
+import type { ParsedWebhookEvent } from "@chatbotx.io/slice-plans"
 import {
   applyWebhookEvent,
   keys,
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
   }
 
-  let event
+  let event: ParsedWebhookEvent
   try {
     event = parseWebhookEvent(rawBody)
   } catch (err) {

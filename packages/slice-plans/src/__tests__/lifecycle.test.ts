@@ -52,14 +52,6 @@ function stubInsert(values: unknown[], chain: "returning" | "awaited") {
   return () => captured
 }
 
-function stubUpdateReturning(rows: unknown[]) {
-  update.mockImplementation(() => ({
-    set: () => ({
-      where: () => ({ returning: vi.fn(async () => rows) }),
-    }),
-  }))
-}
-
 function stubSelect(rowsByCall: unknown[][]) {
   dbSelect.mockImplementation(() => {
     const rows = rowsByCall.shift() ?? []
