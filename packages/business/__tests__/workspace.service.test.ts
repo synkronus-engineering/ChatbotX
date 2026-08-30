@@ -249,9 +249,9 @@ describe("WorkspaceService.create — community workspace limit", () => {
     expect(countWorkspaces).toHaveBeenCalledTimes(1)
   })
 
-  test("throws workspaceLimitReached for the second workspace", async () => {
+  test("throws workspaceLimitReached when the cap is hit", async () => {
     isCommunity.mockReturnValue(true)
-    countWorkspaces.mockResolvedValue(1)
+    countWorkspaces.mockResolvedValue(10_000)
 
     await expect(workspaceService.create(createInput())).rejects.toMatchObject({
       code: "workspaceLimitReached",

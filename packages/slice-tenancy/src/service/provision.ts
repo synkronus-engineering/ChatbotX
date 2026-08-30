@@ -61,9 +61,7 @@ export const provisionWorkspace = async (
   return { workspaceId: workspace.id, created: true }
 }
 
-export const suspendWorkspace = async (
-  workspaceId: string,
-): Promise<void> => {
+export const suspendWorkspace = async (workspaceId: string): Promise<void> => {
   await db.execute(
     sql`UPDATE ent.workspace_meta SET suspended_at = now() WHERE workspace_id = ${workspaceId}`,
   )

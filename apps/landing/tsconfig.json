@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "preserve",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "plugins": [{ "name": "next" }]
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "next.config.ts",
+    "vitest.config.ts"
+  ]
+}
