@@ -767,9 +767,7 @@ export function createAuth(config: AuthConfig) {
         "chatconnectxapp://",
         // Marketing landing posting cross-origin auth calls into this API
         // (konversify.app sign-in/sign-up forms). Absent in upstream deploys.
-        ...(env.AUTH_TRUSTED_LANDING_URL
-          ? [env.AUTH_TRUSTED_LANDING_URL]
-          : []),
+        ...(env.AUTH_TRUSTED_LANDING_URL ? [env.AUTH_TRUSTED_LANDING_URL] : []),
       ]
       if (process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD) {
         return Array.from(new Set(staticOrigins))
