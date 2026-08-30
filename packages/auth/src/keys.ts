@@ -31,6 +31,9 @@ export const keys = () =>
       // shared across tool subdomains. Unset = host-only cookies (localhost /
       // upstream default).
       AUTH_COOKIE_DOMAIN: z.string().optional(),
+      // Extra origin trusted for cross-origin auth calls (e.g. the marketing
+      // landing's sign-in posting to the builder's auth API). Unset = unchanged.
+      AUTH_TRUSTED_LANDING_URL: z.url().optional(),
     },
     runtimeEnv: process.env,
     emptyStringAsUndefined: true,
