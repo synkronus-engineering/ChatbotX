@@ -23,8 +23,12 @@ COPY --from=deps /app/apps/landing/node_modules ./apps/landing/node_modules
 COPY --from=deps /app/packages ./packages
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV NEXT_PUBLIC_BUILDER_URL="http://localhost:3123"
-ENV NEXT_PUBLIC_SITE_URL="http://localhost:3200"
+# NEXT_PUBLIC_* vars inline at build time in client bundles — a runtime
+# /config.js cannot reach the auth client's baseURL. This image is the
+# production artifact for the single Konversify deployment, so the public
+# origins are baked here (local dev runs via pnpm with its own .env).
+ENV NEXT_PUBLIC_BUILDER_URL="https://my.konversify.app"
+ENV NEXT_PUBLIC_SITE_URL="https://konversify.app"
 WORKDIR /app/apps/landing
 RUN pnpm next build
 
