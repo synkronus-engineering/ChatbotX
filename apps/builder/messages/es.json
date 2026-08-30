@@ -149,6 +149,14 @@
     "restore": "Restaurar",
     "loadMore": "Load more"
   },
+  "dashboard": {
+    "title": "Resumen",
+    "chats7d": "Chats (7 días)",
+    "messages7d": "Mensajes (7 días)",
+    "channels": "Canales conectados",
+    "plan": "Plan",
+    "quickActions": "Acciones rápidas"
+  },
   "errors": {
     "superAdminRequired": "Debes ser superadministrador del espacio de trabajo para hacer esto."
   },
@@ -3926,7 +3934,10 @@
     "afterText": "Después"
   },
   "tools": {
-    "title": "Herramientas"
+    "title": "Herramientas",
+    "booking": "Reservas",
+    "crm": "CRM",
+    "social": "Social"
   },
   "aiProviders": {
     "openai": "OpenAI",

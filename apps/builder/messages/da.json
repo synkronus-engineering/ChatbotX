@@ -149,6 +149,14 @@
     "restore": "Gendan",
     "loadMore": "Load more"
   },
+  "dashboard": {
+    "title": "Oversigt",
+    "chats7d": "Chats (7 dage)",
+    "messages7d": "Beskeder (7 dage)",
+    "channels": "Tilsluttede kanaler",
+    "plan": "Plan",
+    "quickActions": "Hurtige handlinger"
+  },
   "errors": {
     "superAdminRequired": "Du skal være super admin for arbejdsområdet for at gøre dette."
   },
@@ -3926,7 +3934,10 @@
     "afterText": "Efter"
   },
   "tools": {
-    "title": "Værktøjer"
+    "title": "Værktøjer",
+    "booking": "Bookinger",
+    "crm": "CRM",
+    "social": "Social"
   },
   "aiProviders": {
     "openai": "OpenAI",

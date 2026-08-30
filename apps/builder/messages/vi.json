@@ -149,6 +149,14 @@
     "restore": "Khôi phục",
     "loadMore": "Load more"
   },
+  "dashboard": {
+    "title": "Tổng quan",
+    "chats7d": "Cuộc trò chuyện (7 ngày)",
+    "messages7d": "Tin nhắn (7 ngày)",
+    "channels": "Kênh đã kết nối",
+    "plan": "Gói",
+    "quickActions": "Thao tác nhanh"
+  },
   "errors": {
     "superAdminRequired": "Bạn cần là super admin của workspace để thực hiện thao tác này."
   },
@@ -3962,7 +3970,10 @@
     "title": "Chăm sóc"
   },
   "tools": {
-    "title": "Công cụ"
+    "title": "Công cụ",
+    "booking": "Đặt lịch",
+    "crm": "CRM",
+    "social": "Mạng xã hội"
   },
   "users": {
     "title": "Người dùng"

@@ -153,6 +153,14 @@
     "wait": "Vänta",
     "loadMore": "Load more"
   },
+  "dashboard": {
+    "title": "Översikt",
+    "chats7d": "Chattar (7 dagar)",
+    "messages7d": "Meddelanden (7 dagar)",
+    "channels": "Anslutna kanaler",
+    "plan": "Abonnemang",
+    "quickActions": "Snabbåtgärder"
+  },
   "errors": {
     "superAdminRequired": "Du måste vara superadministratör för arbetsytan för att göra detta."
   },
@@ -4467,7 +4475,10 @@
     "title": "TikTok"
   },
   "tools": {
-    "title": "Verktyg"
+    "title": "Verktyg",
+    "booking": "Bokningar",
+    "crm": "CRM",
+    "social": "Social"
   },
   "trigger": {
     "actions": {

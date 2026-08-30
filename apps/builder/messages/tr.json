@@ -149,6 +149,14 @@
     "restore": "Geri Yükle",
     "loadMore": "Load more"
   },
+  "dashboard": {
+    "title": "Genel Bakış",
+    "chats7d": "Sohbetler (7 gün)",
+    "messages7d": "Mesajlar (7 gün)",
+    "channels": "Bağlı kanallar",
+    "plan": "Plan",
+    "quickActions": "Hızlı işlemler"
+  },
   "errors": {
     "superAdminRequired": "Bunu yapmak için çalışma alanı süper yöneticisi olmanız gerekir."
   },
@@ -3926,7 +3934,10 @@
     "afterText": "Sonra"
   },
   "tools": {
-    "title": "Araçlar"
+    "title": "Araçlar",
+    "booking": "Rezervasyonlar",
+    "crm": "CRM",
+    "social": "Sosyal"
   },
   "aiProviders": {
     "openai": "OpenAI",

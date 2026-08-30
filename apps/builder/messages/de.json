@@ -149,6 +149,14 @@
     "restore": "Wiederherstellen",
     "loadMore": "Load more"
   },
+  "dashboard": {
+    "title": "Übersicht",
+    "chats7d": "Chats (7 Tage)",
+    "messages7d": "Nachrichten (7 Tage)",
+    "channels": "Verbundene Kanäle",
+    "plan": "Tarif",
+    "quickActions": "Schnellaktionen"
+  },
   "errors": {
     "superAdminRequired": "Sie müssen Super-Administrator des Arbeitsbereichs sein, um dies zu tun."
   },
@@ -3926,7 +3934,10 @@
     "afterText": "Nach"
   },
   "tools": {
-    "title": "Tools"
+    "title": "Tools",
+    "booking": "Termine",
+    "crm": "CRM",
+    "social": "Social"
   },
   "aiProviders": {
     "openai": "OpenAI",

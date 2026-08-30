@@ -1,4 +1,12 @@
 {
+  "dashboard": {
+    "title": "Panoramica",
+    "chats7d": "Chat (7 giorni)",
+    "messages7d": "Messaggi (7 giorni)",
+    "channels": "Canali connessi",
+    "plan": "Piano",
+    "quickActions": "Azioni rapide"
+  },
   "fields": {
     "omnichannel": {
       "label": "Omnicanale"
@@ -3926,7 +3934,10 @@
     "afterText": "Dopo"
   },
   "tools": {
-    "title": "Strumenti"
+    "title": "Strumenti",
+    "booking": "Prenotazioni",
+    "crm": "CRM",
+    "social": "Social"
   },
   "aiProviders": {
     "openai": "OpenAI",

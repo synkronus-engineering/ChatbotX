@@ -149,6 +149,14 @@
     "restore": "Pulihkan",
     "loadMore": "Load more"
   },
+  "dashboard": {
+    "title": "Ringkasan",
+    "chats7d": "Obrolan (7 hari)",
+    "messages7d": "Pesan (7 hari)",
+    "channels": "Saluran terhubung",
+    "plan": "Paket",
+    "quickActions": "Tindakan cepat"
+  },
   "errors": {
     "superAdminRequired": "Anda harus menjadi super admin workspace untuk melakukan ini."
   },
@@ -3926,7 +3934,10 @@
     "afterText": "Setelah"
   },
   "tools": {
-    "title": "Alat"
+    "title": "Alat",
+    "booking": "Reservasi",
+    "crm": "CRM",
+    "social": "Sosial"
   },
   "aiProviders": {
     "openai": "OpenAI",

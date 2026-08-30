@@ -1,4 +1,12 @@
 {
+  "dashboard": {
+    "title": "Prezentare generală",
+    "chats7d": "Conversații (7 zile)",
+    "messages7d": "Mesaje (7 zile)",
+    "channels": "Canale conectate",
+    "plan": "Plan",
+    "quickActions": "Acțiuni rapide"
+  },
   "flows": {
     "export": {
       "notPublished": "Acest flux nu a fost niciodată publicat. Publicați-l înainte de a-l exporta.",
@@ -3926,7 +3934,10 @@
     "afterText": "După"
   },
   "tools": {
-    "title": "Instrumente"
+    "title": "Instrumente",
+    "booking": "Rezervări",
+    "crm": "CRM",
+    "social": "Social"
   },
   "aiProviders": {
     "openai": "OpenAI",

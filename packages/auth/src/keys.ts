@@ -13,6 +13,24 @@ export const keys = () =>
       // single-domain deploys keep working.
       NEXT_PUBLIC_BROKER_URL: z.url().optional(),
       BETTER_AUTH_SECRET: z.string(),
+      // Konversify access-token IdP (contract 1/3). Both must be set for the
+      // better-auth `jwt` plugin to activate — unset keeps upstream/self-hosted
+      // behavior byte-identical. Keys are generated and stored (encrypted with
+      // BETTER_AUTH_SECRET) in the `Jwk` table by the plugin itself; there is no
+      // key env in better-auth 1.6.x.
+      AUTH_JWT_ISSUER: z.url().optional(),
+      AUTH_JWT_AUDIENCE: z.string().optional(),
+      // Access-token TTL in seconds; the contract caps it at 300.
+      AUTH_JWT_TTL_SECONDS: z.coerce
+        .number()
+        .int()
+        .positive()
+        .max(300)
+        .optional(),
+      // Session-cookie Domain (e.g. `.konversify.app`) so the shell session is
+      // shared across tool subdomains. Unset = host-only cookies (localhost /
+      // upstream default).
+      AUTH_COOKIE_DOMAIN: z.string().optional(),
     },
     runtimeEnv: process.env,
     emptyStringAsUndefined: true,

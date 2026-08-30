@@ -149,6 +149,14 @@
     "restore": "復元",
     "loadMore": "Load more"
   },
+  "dashboard": {
+    "title": "概要",
+    "chats7d": "チャット（7日間）",
+    "messages7d": "メッセージ（7日間）",
+    "channels": "接続済みチャネル",
+    "plan": "プラン",
+    "quickActions": "クイック操作"
+  },
   "errors": {
     "superAdminRequired": "この操作を行うには、ワークスペースのスーパー管理者である必要があります。"
   },
@@ -3905,7 +3913,10 @@
     "afterText": "後"
   },
   "tools": {
-    "title": "ツール"
+    "title": "ツール",
+    "booking": "予約",
+    "crm": "CRM",
+    "social": "ソーシャル"
   },
   "aiProviders": {
     "openai": "OpenAI",
