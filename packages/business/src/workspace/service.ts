@@ -40,7 +40,7 @@ const stableKey = (where: WorkspaceWhere) =>
   JSON.stringify(Object.fromEntries(Object.entries(where).sort()))
 
 const PURGE_WORKSPACE_TEARDOWN_CONCURRENCY = 5
-const COMMUNITY_MAX_WORKSPACES = 10000
+const COMMUNITY_MAX_WORKSPACES = 10_000
 const WORKSPACE_LIMIT_LOCK_TIMEOUT_SECONDS = 30
 
 class WorkspaceService extends BaseService {
