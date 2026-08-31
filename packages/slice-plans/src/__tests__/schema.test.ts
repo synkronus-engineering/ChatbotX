@@ -11,6 +11,8 @@ import {
 
 const MIGRATION_PATH =
   "../../../database/drizzle/20260830120000_slice_plans_ent/migration.sql"
+const CORRECTIVE_PATH =
+  "../../../database/drizzle/20260831230000_slice_ent_camel_columns/migration.sql"
 
 /**
  * Follows the E1 slice-tenancy test approach: schema-shape asserts plus
@@ -94,4 +96,50 @@ describe("migration (slice_tenancy_ent pattern)", () => {
       ],
     })
   })
+
+  it("renames every snake_case column the models address as camelCase", () => {
+    expect(sql).not.toContain("RENAME COLUMN")
+  })
+})
+
+describe("corrective migration (camel columns)", () => {
+  const sql = readFileSync(new URL(CORRECTIVE_PATH, import.meta.url), "utf8")
+
+  it("renames the snake columns on all six ent tables", () => {
+    for (const rename of [
+      '"ent"."workspace_meta" RENAME COLUMN "workspace_id" TO "workspaceId"',
+      '"ent"."workspace_meta" RENAME COLUMN "suspended_at" TO "suspendedAt"',
+      '"ent"."isolation_probe" RENAME COLUMN "workspace_id" TO "workspaceId"',
+      '"ent"."isolation_probe" RENAME COLUMN "created_at" TO "createdAt"',
+      '"ent"."plan" RENAME COLUMN "workspaces_limit" TO "workspacesLimit"',
+      '"ent"."plan" RENAME COLUMN "monthly_price_cents" TO "monthlyPriceCents"',
+      '"ent"."plan" RENAME COLUMN "ls_variant_id" TO "lsVariantId"',
+      '"ent"."tenant_subscription" RENAME COLUMN "workspace_id" TO "workspaceId"',
+      '"ent"."tenant_subscription" RENAME COLUMN "plan_key" TO "planKey"',
+      '"ent"."tenant_subscription" RENAME COLUMN "trial_ends_at" TO "trialEndsAt"',
+      '"ent"."tenant_subscription" RENAME COLUMN "ls_subscription_id" TO "lsSubscriptionId"',
+      '"ent"."tenant_usage" RENAME COLUMN "bot_messages_used" TO "botMessagesUsed"',
+      '"ent"."tenant_usage" RENAME COLUMN "bot_messages_period_start" TO "botMessagesPeriodStart"',
+      '"ent"."ls_event" RENAME COLUMN "event_id" TO "eventId"',
+      '"ent"."ls_event" RENAME COLUMN "event_name" TO "eventName"',
+      '"ent"."ls_event" RENAME COLUMN "processed_at" TO "processedAt"',
+    ]) {
+      expect(sql).toContain(rename)
+    }
+  })
+
+  it("is rename-only and guarded (no seed rewrite, DO blocks + IF EXISTS)", () => {
+    expect(sql).toContain("information_schema.columns")
+    expect(sql).not.toContain("INSERT INTO")
+    expect(sql).toContain('DROP POLICY IF EXISTS "tenant_subscription_rls"')
+  })
+
+  it("rebuilds the RLS policies against the renamed column", () => {
+    expect(sql.match(/CREATE POLICY/g)?.length).toBe(4)
+    expect(
+      sql.match(/"workspaceId" = current_setting\('app\.workspace_id', true\)::bigint/g)
+        ?.length,
+    ).toBe(8)
+  })
+
 })

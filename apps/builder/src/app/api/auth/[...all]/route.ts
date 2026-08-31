@@ -130,3 +130,8 @@ const handle = async (request: Request): Promise<Response> => {
 
 export const GET = handle
 export const POST = handle
+// Cross-origin auth (landing sign-in at konversify.app) needs a CORS
+// preflight answer with trusted-origin headers — without this export
+// Next answers OPTIONS itself with a bare 204 and the browser blocks
+// the sign-in request.
+export const OPTIONS = handle
