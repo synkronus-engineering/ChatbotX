@@ -41,11 +41,13 @@ export default async function WorkspaceLayout({
 }) {
   const workspaceId = getIdFromParams(await params, "workspaceId")
   if (!workspaceId) {
+    console.error("[debug-space-404] gate: workspaceId falsy")
     return notFound()
   }
 
   const user = await getCurrentUser()
   if (!user) {
+    console.error("[debug-space-404] gate: no user, wid=", workspaceId)
     return notFound()
   }
 
@@ -66,6 +68,20 @@ export default async function WorkspaceLayout({
     (workspaceMember) => workspaceMember.workspace.id === workspaceId,
   )
   if (!targetWorkspaceMember) {
+    console.error(
+      "[debug-space-404] gate: no member match; wid=",
+      workspaceId,
+      "userId=",
+      user.id,
+      "members=",
+      JSON.stringify(
+        allWorkspaceMembers.map((m) => [
+          m.workspaceId,
+          typeof m.workspace?.id,
+          m.workspace?.id,
+        ]),
+      ),
+    )
     return notFound()
   }
 
