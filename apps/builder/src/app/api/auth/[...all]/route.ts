@@ -159,6 +159,7 @@ export async function OPTIONS(request: NextRequest): Promise<NextResponse> {
     status: 204,
     headers: {
       "Access-Control-Allow-Origin": origin,
+      "Access-Control-Allow-Credentials": "true",
       "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
       "Access-Control-Allow-Headers":
         request.headers.get("access-control-request-headers") ?? "Content-Type",
