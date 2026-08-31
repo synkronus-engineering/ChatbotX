@@ -127,7 +127,48 @@ const handle = async (request: Request): Promise<Response> => {
     // Re-home a baseURL-resolved verification redirect onto the branded host
     // the user is on (magic-link/verify, verify-email, reset-password).
     const response = await instance.handler(request)
-    return rewriteAuthRedirectToPublicHost(request, response)
+    return withAuthCors(
+      request,
+      await rewriteAuthRedirectToPublicHost(request, response),
+    )
+  })
+}
+
+/**
+ * The static origins cross-origin auth is accepted from — the same set the
+ * OPTIONS preflight below allows. Kept as a function so env is read per
+ * request (tests and multi-env deploys), mirroring trustedOrigins in
+ * packages/auth minus its dynamic custom-domain lookup.
+ */
+const trustedAuthOrigins = (): Set<string> =>
+  new Set(
+    [
+      process.env.NEXT_PUBLIC_BROKER_URL,
+      process.env.NEXT_PUBLIC_BUILDER_URL,
+      process.env.AUTH_TRUSTED_LANDING_URL,
+    ].filter((value): value is string => Boolean(value)),
+  )
+
+/**
+ * Decorate auth responses (POST/GET) with CORS headers for trusted origins —
+ * better-auth's origin middleware rejects untrusted origins but does not
+ * emit the allow headers the browser needs to read a credentialed
+ * cross-origin response (the landing's sign-in). Body/status/cookies pass
+ * through untouched.
+ */
+const withAuthCors = (request: Request, response: Response): Response => {
+  const origin = request.headers.get("origin") ?? ""
+  if (!(origin && trustedAuthOrigins().has(origin))) {
+    return response
+  }
+  const headers = new Headers(response.headers)
+  headers.set("Access-Control-Allow-Origin", origin)
+  headers.set("Access-Control-Allow-Credentials", "true")
+  headers.append("Vary", "Origin")
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
   })
 }
 
@@ -145,14 +186,7 @@ export const POST = handle
  */
 export async function OPTIONS(request: NextRequest): Promise<NextResponse> {
   const origin = request.headers.get("origin") ?? ""
-  const trusted = new Set(
-    [
-      process.env.NEXT_PUBLIC_BROKER_URL,
-      process.env.NEXT_PUBLIC_BUILDER_URL,
-      process.env.AUTH_TRUSTED_LANDING_URL,
-    ].filter((value): value is string => Boolean(value)),
-  )
-  if (!trusted.has(origin)) {
+  if (!trustedAuthOrigins().has(origin)) {
     return new NextResponse(null, { status: 403 })
   }
   return new NextResponse(null, {
