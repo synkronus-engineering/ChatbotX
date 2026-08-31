@@ -213,8 +213,12 @@ jobs:
           # 340.3s export — while a same-SHA rebuild still ran `pnpm install`
           # cold and `next build` in full, so the intermediate layers were never
           # usefully restored. See the phase table in the plan for measurements.
-          cache-from: type=gha,scope=${{ matrix.label }}
-          cache-to: type=gha,scope=${{ matrix.label }},mode=min
+          # scope suffix -v2: the builder leg's -v1 cache served stale
+          # route.js layers tagged with fresh revision labels (OPTIONS-export
+          # fix absent from a build labelled with its commit). Rotating the
+          # scope forces one cold rebuild and a clean cache lineage.
+          cache-from: type=gha,scope=${{ matrix.label }}-v2
+          cache-to: type=gha,scope=${{ matrix.label }}-v2,mode=min
           platforms: ${{ env.BUILD_PLATFORMS }}
           # Turbo remote cache: deliberately NOT passed. buildx rejects an
           # empty-valued secret outright, so passing the partial set that exists
@@ -243,8 +247,12 @@ jobs:
           # 340.3s export — while a same-SHA rebuild still ran `pnpm install`
           # cold and `next build` in full, so the intermediate layers were never
           # usefully restored. See the phase table in the plan for measurements.
-          cache-from: type=gha,scope=${{ matrix.label }}
-          cache-to: type=gha,scope=${{ matrix.label }},mode=min
+          # scope suffix -v2: the builder leg's -v1 cache served stale
+          # route.js layers tagged with fresh revision labels (OPTIONS-export
+          # fix absent from a build labelled with its commit). Rotating the
+          # scope forces one cold rebuild and a clean cache lineage.
+          cache-from: type=gha,scope=${{ matrix.label }}-v2
+          cache-to: type=gha,scope=${{ matrix.label }}-v2,mode=min
           platforms: ${{ env.BUILD_PLATFORMS }}
           # Turbo remote cache secrets omitted — see "Build and push main image".
 
