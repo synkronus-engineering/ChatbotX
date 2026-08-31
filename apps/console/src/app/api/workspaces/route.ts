@@ -6,10 +6,10 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 export async function GET() {
   try {
     const { rows } = await pool.query(
-      `SELECT wm.workspace_id::text, w.name, u.email as owner_email,
-              wm.plan, wm.locale, wm.suspended_at::text
+      `SELECT wm."workspaceId"::text AS workspace_id, w.name, u.email as owner_email,
+              wm.plan, wm.locale, wm."suspendedAt"::text AS suspended_at
        FROM ent.workspace_meta wm
-       JOIN "Workspace" w ON w.id = wm.workspace_id
+       JOIN "Workspace" w ON w.id = wm."workspaceId"
        JOIN "User" u ON u.id = w."ownerId"
        ORDER BY w.name`,
     )
@@ -65,7 +65,7 @@ export async function POST(req: Request) {
     )
 
     await client.query(
-      `INSERT INTO ent.workspace_meta (workspace_id, plan, locale)
+      `INSERT INTO ent.workspace_meta ("workspaceId", plan, locale)
        VALUES ($1::bigint, $2, $3) ON CONFLICT DO NOTHING`,
       [workspaceId, plan, locale],
     )
