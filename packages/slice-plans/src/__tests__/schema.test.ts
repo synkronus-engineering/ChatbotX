@@ -103,7 +103,13 @@ describe("migration (slice_tenancy_ent pattern)", () => {
 })
 
 describe("corrective migration (camel columns)", () => {
-  const sql = readFileSync(new URL(CORRECTIVE_PATH, import.meta.url), "utf8")
+  const raw = readFileSync(new URL(CORRECTIVE_PATH, import.meta.url), "utf8")
+  // Comment lines quote the original failure (INSERT INTO …) — strip before
+  // asserting on statement content.
+  const sql = raw
+    .split("\n")
+    .filter((line) => !line.trimStart().startsWith("--"))
+    .join("\n")
 
   it("renames the snake columns on all six ent tables", () => {
     for (const rename of [
@@ -137,9 +143,9 @@ describe("corrective migration (camel columns)", () => {
   it("rebuilds the RLS policies against the renamed column", () => {
     expect(sql.match(/CREATE POLICY/g)?.length).toBe(4)
     expect(
-      sql.match(/"workspaceId" = current_setting\('app\.workspace_id', true\)::bigint/g)
-        ?.length,
+      sql.match(
+        /"workspaceId" = current_setting\('app\.workspace_id', true\)::bigint/g,
+      )?.length,
     ).toBe(8)
   })
-
 })
