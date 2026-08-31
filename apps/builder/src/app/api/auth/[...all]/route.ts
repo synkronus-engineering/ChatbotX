@@ -6,7 +6,10 @@ import {
   withTenant,
 } from "@chatbotx.io/auth/tenant"
 import { getPublicUrlFromRequest } from "@chatbotx.io/utils"
+import type { NextRequest } from "next/server"
+import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth/auth"
+
 import { getSocialAuthForTenant } from "@/lib/auth/auth-instances"
 import { rewriteAuthRedirectToPublicHost } from "@/lib/auth-redirect"
 import { resolveRelayTarget } from "@/lib/oauth-referer"
@@ -130,8 +133,37 @@ const handle = async (request: Request): Promise<Response> => {
 
 export const GET = handle
 export const POST = handle
-// Cross-origin auth (landing sign-in at konversify.app) needs a CORS
-// preflight answer with trusted-origin headers — without this export
-// Next answers OPTIONS itself with a bare 204 and the browser blocks
-// the sign-in request.
-export const OPTIONS = handle
+
+/**
+ * CORS preflight for cross-origin auth (landing sign-in at konversify.app).
+ * Routing OPTIONS into better-auth's handler did not answer the preflight —
+ * Next returned its own 404 — so answer it explicitly: allow the request
+ * only from the same static origins the auth instance trusts (broker,
+ * builder, optional landing), echoing the requested headers. better-auth's
+ * origin middleware adds ACAO to the actual POST/GET responses; only the
+ * preflight leg needed this.
+ */
+export async function OPTIONS(request: NextRequest): Promise<NextResponse> {
+  const origin = request.headers.get("origin") ?? ""
+  const trusted = new Set(
+    [
+      process.env.NEXT_PUBLIC_BROKER_URL,
+      process.env.NEXT_PUBLIC_BUILDER_URL,
+      process.env.AUTH_TRUSTED_LANDING_URL,
+    ].filter((value): value is string => Boolean(value)),
+  )
+  if (!trusted.has(origin)) {
+    return new NextResponse(null, { status: 403 })
+  }
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": origin,
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers":
+        request.headers.get("access-control-request-headers") ?? "Content-Type",
+      "Access-Control-Max-Age": "600",
+      Vary: "Origin",
+    },
+  })
+}
