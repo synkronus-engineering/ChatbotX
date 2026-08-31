@@ -60,8 +60,36 @@ export async function POST(req: Request) {
 
     await client.query(
       `INSERT INTO "WorkspaceMember" (id, "workspaceId", "userId", role, "createdAt", "updatedAt", permissions, "notificationTypes", "notificationChannels")
-       VALUES ((SELECT COALESCE(MAX(id),0)+1 FROM "WorkspaceMember"), $1, $2, 'owner', now(), now(), '{}'::jsonb, '{}'::jsonb, '{}'::jsonb)`,
-      [workspaceId, ownerId],
+       VALUES ((SELECT COALESCE(MAX(id),0)+1 FROM "WorkspaceMember"), $1, $2, 'owner', now(), now(), $3::jsonb, $4::jsonb, $5::jsonb)`,
+      [
+        workspaceId,
+        ownerId,
+        // Owner grants every permission flag — hasWorkspacePermission fails
+        // closed on missing keys, so the column default {} would lock the
+        // owner out of every permission-gated /space route (the exact bug
+        // that 404'd E1-provisioned workspaces). Mirrors workspaceService.create.
+        JSON.stringify({
+          superAdmin: true,
+          analytics: true,
+          flows: true,
+          contacts: true,
+          onlyAssignedContacts: true,
+          emailAndPhone: true,
+          broadcast: true,
+          ecommerce: true,
+        }),
+        JSON.stringify({
+          notifyAdmin: true,
+          newMessageToHuman: true,
+          newOrder: true,
+        }),
+        JSON.stringify({
+          messenger: true,
+          email: true,
+          telegram: true,
+          browser: true,
+        }),
+      ],
     )
 
     await client.query(
