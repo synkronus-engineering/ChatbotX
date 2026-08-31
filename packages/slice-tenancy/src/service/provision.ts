@@ -61,7 +61,7 @@ export const provisionWorkspace = async (
 
   // Record our overlay in ent.workspace_meta
   await db.execute(
-    sql`INSERT INTO ent.workspace_meta (workspace_id, plan, locale)
+    sql`INSERT INTO ent.workspace_meta ("workspaceId", plan, locale)
         VALUES (${workspace.id}, ${plan}, ${locale})
         ON CONFLICT DO NOTHING`,
   )
@@ -71,7 +71,7 @@ export const provisionWorkspace = async (
 
 export const suspendWorkspace = async (workspaceId: string): Promise<void> => {
   await db.execute(
-    sql`UPDATE ent.workspace_meta SET suspended_at = now() WHERE workspace_id = ${workspaceId}`,
+    sql`UPDATE ent.workspace_meta SET "suspendedAt" = now() WHERE "workspaceId" = ${workspaceId}`,
   )
 }
 
@@ -79,13 +79,13 @@ export const reactivateWorkspace = async (
   workspaceId: string,
 ): Promise<void> => {
   await db.execute(
-    sql`UPDATE ent.workspace_meta SET suspended_at = NULL WHERE workspace_id = ${workspaceId}`,
+    sql`UPDATE ent.workspace_meta SET "suspendedAt" = NULL WHERE "workspaceId" = ${workspaceId}`,
   )
 }
 
 export const listWorkspaces = async () => {
   const result = await db.execute(
-    sql`SELECT wm.workspace_id, wm.plan, wm.locale, wm.suspended_at,
+    sql`SELECT wm."workspaceId", wm.plan, wm.locale, wm."suspendedAt",
                w.name, u.email as owner_email
         FROM ent.workspace_meta wm
         JOIN "Workspace" w ON w.id = wm.workspace_id
