@@ -345,7 +345,30 @@
       "bannerDescription": "L’envoi et la réception de messages sont suspendus jusqu’à ce que vous changiez de forfait.",
       "bannerCta": "Changer de forfait",
       "createDisabled": "La création de {feature} est désactivée jusqu’à ce que vous changiez de forfait."
-    }
+    },
+    "status": {
+      "active": "Actif",
+      "canceled": "Résilié",
+      "expired": "Expiré",
+      "past_due": "Paiement en retard",
+      "trial": "En essai"
+    },
+    "upgrade": {
+      "cta": "Passer à Pro",
+      "error": "Le paiement en ligne est momentanément indisponible. Réessayez dans un instant.",
+      "pending": "Redirection vers le paiement…"
+    },
+    "notConfigured": {
+      "description": "Le paiement en ligne n'est pas encore connecté. Votre offre et ses limites restent applicables.",
+      "title": "Facturation pas encore configurée"
+    },
+    "period": {
+      "current": "Période en cours : {start} – {end}"
+    },
+    "manage": {
+      "hint": "Votre abonnement se renouvelle automatiquement à la fin de chaque période."
+    },
+    "usageTitle": "Utilisation"
   },
   "broadcasts": {
     "title": "Diffusions",

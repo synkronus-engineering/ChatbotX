@@ -345,7 +345,30 @@
       "bannerDescription": "Sending and receiving messages is paused until you upgrade your plan.",
       "bannerCta": "Upgrade",
       "createDisabled": "Creating new {feature} is disabled until you upgrade your plan."
-    }
+    },
+    "status": {
+      "active": "Active",
+      "canceled": "Canceled",
+      "expired": "Expired",
+      "past_due": "Past due",
+      "trial": "On trial"
+    },
+    "upgrade": {
+      "cta": "Upgrade to Pro",
+      "error": "Checkout is unavailable right now. Try again in a moment.",
+      "pending": "Redirecting to checkout…"
+    },
+    "notConfigured": {
+      "description": "Online checkout is not connected yet. Your plan and its limits still apply.",
+      "title": "Billing not yet configured"
+    },
+    "period": {
+      "current": "Current period: {start} – {end}"
+    },
+    "manage": {
+      "hint": "Your subscription renews automatically at the end of each period."
+    },
+    "usageTitle": "Usage"
   },
   "broadcasts": {
     "title": "Broadcasts",

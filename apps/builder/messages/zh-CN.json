@@ -631,7 +631,30 @@
       "monthlyBotMessages": "每月机器人消息",
       "teamMembers": "团队成员",
       "workspaces": "工作区"
-    }
+    },
+    "status": {
+      "active": "有效",
+      "canceled": "已取消",
+      "expired": "已过期",
+      "past_due": "逾期未付",
+      "trial": "试用中"
+    },
+    "upgrade": {
+      "cta": "升级到 Pro",
+      "error": "在线支付暂时不可用，请稍后再试。",
+      "pending": "正在跳转到支付页面…"
+    },
+    "notConfigured": {
+      "description": "在线支付尚未连接。你的套餐及其限制仍然适用。",
+      "title": "账单尚未配置"
+    },
+    "period": {
+      "current": "当前周期：{start} – {end}"
+    },
+    "manage": {
+      "hint": "你的订阅会在每个周期结束时自动续期。"
+    },
+    "usageTitle": "使用量"
   },
   "botSimulator": {
     "description": "在即时环境中仿真机器人的行为。",

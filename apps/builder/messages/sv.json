@@ -458,7 +458,30 @@
       "monthlyBotMessages": "Botmeddelanden (per månad)",
       "teamMembers": "Teammedlemmar",
       "workspaces": "Arbetsytor"
-    }
+    },
+    "status": {
+      "active": "Aktiv",
+      "canceled": "Avslutad",
+      "expired": "Utgången",
+      "past_due": "Försenad betalning",
+      "trial": "På provperiod"
+    },
+    "upgrade": {
+      "cta": "Uppgradera till Pro",
+      "error": "Onlinebetalningen är inte tillgänglig just nu. Försök igen om en stund.",
+      "pending": "Skickar vidare till betalningen…"
+    },
+    "notConfigured": {
+      "description": "Onlinebetalningen är inte ansluten ännu. Din plan och dess gränser gäller fortfarande.",
+      "title": "Fakturering är ännu inte konfigurerad"
+    },
+    "period": {
+      "current": "Nuvarande period: {start} – {end}"
+    },
+    "manage": {
+      "hint": "Din prenumeration förnyas automatiskt i slutet av varje period."
+    },
+    "usageTitle": "Användning"
   },
   "botSimulator": {
     "description": "Simulera botens beteende i en realtidsmiljö.",

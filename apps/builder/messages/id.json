@@ -345,7 +345,30 @@
       "bannerDescription": "Pengiriman dan penerimaan pesan dijeda hingga Anda meningkatkan paket.",
       "bannerCta": "Tingkatkan",
       "createDisabled": "Pembuatan {feature} baru dinonaktifkan hingga Anda meningkatkan paket."
-    }
+    },
+    "status": {
+      "active": "Aktif",
+      "canceled": "Dibatalkan",
+      "expired": "Kedaluwarsa",
+      "past_due": "Pembayaran tertunggak",
+      "trial": "Sedang uji coba"
+    },
+    "upgrade": {
+      "cta": "Upgrade ke Pro",
+      "error": "Pembayaran online sedang tidak tersedia. Coba lagi sebentar lagi.",
+      "pending": "Mengalihkan ke pembayaran…"
+    },
+    "notConfigured": {
+      "description": "Pembayaran online belum terhubung. Paket dan batasnya tetap berlaku.",
+      "title": "Penagihan belum dikonfigurasi"
+    },
+    "period": {
+      "current": "Periode saat ini: {start} – {end}"
+    },
+    "manage": {
+      "hint": "Langganan Anda diperpanjang otomatis di akhir setiap periode."
+    },
+    "usageTitle": "Penggunaan"
   },
   "broadcasts": {
     "title": "Broadcast",

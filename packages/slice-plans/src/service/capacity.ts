@@ -134,3 +134,47 @@ async function resolveOwnerPlanState(
   // No workspace yet: the free plan's ceiling applies to the first create.
   return resolveFreePlanState()
 }
+
+export interface CapacityUsage {
+  limit: number | null
+  metric: CapacityMetric
+  used: number
+}
+
+/**
+ * Read-only usage snapshot for the billing page: live counts (the same
+ * counters the assert* gates compare) against the effective plan limits.
+ * `workspaces` is owner-scoped like its gate; channels/members are
+ * workspace-scoped.
+ */
+export async function getCapacitySnapshot(props: {
+  ownerId: string
+  workspaceId: string
+}): Promise<CapacityUsage[]> {
+  // Sequential (not Promise.all): a billing-page render does not need the
+  // parallelism, and a fixed query order keeps the snapshot deterministic for
+  // tests.
+  const ownerState = await resolveOwnerPlanState(props.ownerId)
+  const workspaceState = await resolveEffectivePlan(props.workspaceId)
+  const workspaces = await countOwnedWorkspaces(props.ownerId)
+  const channels = await countConnectedChannels(props.workspaceId)
+  const members = await countWorkspaceMembers(props.workspaceId)
+
+  return [
+    {
+      metric: "workspaces",
+      limit: ownerState.plan?.workspacesLimit ?? null,
+      used: workspaces,
+    },
+    {
+      metric: "channels",
+      limit: workspaceState.plan?.channelsLimit ?? null,
+      used: channels,
+    },
+    {
+      metric: "members",
+      limit: workspaceState.plan?.membersLimit ?? null,
+      used: members,
+    },
+  ]
+}

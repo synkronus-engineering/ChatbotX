@@ -345,7 +345,30 @@
       "bannerDescription": "Das Senden und Empfangen von Nachrichten ist pausiert, bis Sie Ihren Tarif upgraden.",
       "bannerCta": "Upgraden",
       "createDisabled": "Das Erstellen neuer Elemente für {feature} ist deaktiviert, bis Sie Ihren Tarif upgraden."
-    }
+    },
+    "status": {
+      "active": "Aktiv",
+      "canceled": "Gekündigt",
+      "expired": "Abgelaufen",
+      "past_due": "Zahlungsrückstand",
+      "trial": "In der Testphase"
+    },
+    "upgrade": {
+      "cta": "Auf Pro upgraden",
+      "error": "Der Checkout ist derzeit nicht verfügbar. Versuche es gleich noch einmal.",
+      "pending": "Weiterleitung zum Checkout…"
+    },
+    "notConfigured": {
+      "description": "Der Online-Checkout ist noch nicht verbunden. Dein Tarif und seine Limits gelten weiterhin.",
+      "title": "Abrechnung ist noch nicht konfiguriert"
+    },
+    "period": {
+      "current": "Aktuelle Laufzeit: {start} – {end}"
+    },
+    "manage": {
+      "hint": "Dein Abo verlängert sich am Ende jedes Zeitraums automatisch."
+    },
+    "usageTitle": "Nutzung"
   },
   "broadcasts": {
     "title": "Broadcasts",

@@ -345,7 +345,30 @@
       "bannerDescription": "Planınızı yükseltene kadar mesaj gönderme ve alma duraklatıldı.",
       "bannerCta": "Yükselt",
       "createDisabled": "Planınızı yükseltene kadar yeni {feature} oluşturma devre dışıdır."
-    }
+    },
+    "status": {
+      "active": "Etkin",
+      "canceled": "İptal edildi",
+      "expired": "Süresi doldu",
+      "past_due": "Gecikmiş ödeme",
+      "trial": "Deneme sürümünde"
+    },
+    "upgrade": {
+      "cta": "Pro'ya Yükselt",
+      "error": "Çevrimiçi ödeme şu anda kullanılamıyor. Birkaç dakika sonra tekrar deneyin.",
+      "pending": "Ödemeye yönlendiriliyorsunuz…"
+    },
+    "notConfigured": {
+      "description": "Çevrimiçi ödeme henüz bağlı değil. Planınız ve sınırları geçerli kalmaya devam eder.",
+      "title": "Faturalama henüz yapılandırılmadı"
+    },
+    "period": {
+      "current": "Geçerli dönem: {start} – {end}"
+    },
+    "manage": {
+      "hint": "Aboneliğiniz her dönemin sonunda otomatik olarak yenilenir."
+    },
+    "usageTitle": "Kullanım"
   },
   "broadcasts": {
     "title": "Toplu Gönderimler",

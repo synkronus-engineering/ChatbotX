@@ -345,7 +345,30 @@
       "bannerDescription": "O envio e a receção de mensagens estão em pausa até atualizar o seu plano.",
       "bannerCta": "Atualizar",
       "createDisabled": "A criação de novos recursos de {feature} está desativada até atualizar o seu plano."
-    }
+    },
+    "status": {
+      "active": "Ativo",
+      "canceled": "Cancelado",
+      "expired": "Expirado",
+      "past_due": "Pagamento em atraso",
+      "trial": "Em período de teste"
+    },
+    "upgrade": {
+      "cta": "Atualizar para Pro",
+      "error": "O pagamento online está temporariamente indisponível. Tente novamente dentro de momentos.",
+      "pending": "A redirecionar para o pagamento…"
+    },
+    "notConfigured": {
+      "description": "O pagamento online ainda não foi ligado. O seu plano e os respetivos limites continuam a aplicar-se.",
+      "title": "Faturação ainda não configurada"
+    },
+    "period": {
+      "current": "Período atual: {start} – {end}"
+    },
+    "manage": {
+      "hint": "A sua subscrição é renovada automaticamente no final de cada período."
+    },
+    "usageTitle": "Utilização"
   },
   "broadcasts": {
     "title": "Transmissões",

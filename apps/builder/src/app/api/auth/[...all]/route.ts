@@ -184,7 +184,7 @@ export const POST = handle
  * origin middleware adds ACAO to the actual POST/GET responses; only the
  * preflight leg needed this.
  */
-export async function OPTIONS(request: NextRequest): Promise<NextResponse> {
+export function OPTIONS(request: NextRequest): NextResponse {
   const origin = request.headers.get("origin") ?? ""
   if (!trustedAuthOrigins().has(origin)) {
     return new NextResponse(null, { status: 403 })

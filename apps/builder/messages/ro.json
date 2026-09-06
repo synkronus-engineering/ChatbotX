@@ -1119,7 +1119,30 @@
       "bannerDescription": "Trimiterea și primirea mesajelor este întreruptă până când actualizezi planul.",
       "bannerCta": "Actualizează",
       "createDisabled": "Crearea unui nou {feature} este dezactivată până când actualizezi planul."
-    }
+    },
+    "status": {
+      "active": "Activ",
+      "canceled": "Anulat",
+      "expired": "Expirat",
+      "past_due": "Plată restantă",
+      "trial": "În perioadă de probă"
+    },
+    "upgrade": {
+      "cta": "Treci la Pro",
+      "error": "Plata online nu este disponibilă momentan. Încearcă din nou peste câteva momente.",
+      "pending": "Se redirecționează către plată…"
+    },
+    "notConfigured": {
+      "description": "Plata online nu este încă conectată. Planul tău și limitele lui rămân în vigoare.",
+      "title": "Facturarea nu este încă configurată"
+    },
+    "period": {
+      "current": "Perioada curentă: {start} – {end}"
+    },
+    "manage": {
+      "hint": "Abonamentul tău se reînnoiește automat la sfârșitul fiecărei perioade."
+    },
+    "usageTitle": "Utilizare"
   },
   "broadcasts": {
     "title": "Difuzări",

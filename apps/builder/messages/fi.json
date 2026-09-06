@@ -345,7 +345,30 @@
       "bannerDescription": "Viestien lähetys ja vastaanotto on keskeytetty, kunnes päivität tilauksesi.",
       "bannerCta": "Päivitä",
       "createDisabled": "Uuden kohteen {feature} luominen on poistettu käytöstä, kunnes päivität tilauksesi."
-    }
+    },
+    "status": {
+      "active": "Aktiivinen",
+      "canceled": "Peruttu",
+      "expired": "Vanhentunut",
+      "past_due": "Erääntynyt",
+      "trial": "Kokeilussa"
+    },
+    "upgrade": {
+      "cta": "Päivitä Prohon",
+      "error": "Maksu ei ole juuri nyt käytettävissä. Yritä hetken päästä uudelleen.",
+      "pending": "Ohjataan kassalle…"
+    },
+    "notConfigured": {
+      "description": "Verkkomaksua ei ole vielä yhdistetty. Suunnitelmasi ja sen rajat ovat edelleen voimassa.",
+      "title": "Laskutus ei ole vielä määritetty"
+    },
+    "period": {
+      "current": "Nykyinen jakso: {start} – {end}"
+    },
+    "manage": {
+      "hint": "Tilauksesi uusiutuu automaattisesti jokaisen jakson lopussa."
+    },
+    "usageTitle": "Käyttö"
   },
   "broadcasts": {
     "title": "Joukkolähetykset",

@@ -1930,7 +1930,30 @@
       "bannerDescription": "傳送與接收訊息將暫停，直到您升級方案。",
       "bannerCta": "升級",
       "createDisabled": "建立新的 {feature} 將被停用，直到您升級您的方案。"
-    }
+    },
+    "status": {
+      "active": "有效",
+      "canceled": "已取消",
+      "expired": "已過期",
+      "past_due": "逾期未付款",
+      "trial": "試用中"
+    },
+    "upgrade": {
+      "cta": "升級至 Pro",
+      "error": "線上付款目前無法使用，請稍後再試。",
+      "pending": "正在重新導向至付款頁面…"
+    },
+    "notConfigured": {
+      "description": "線上付款尚未連結。你的方案與其限制仍然有效。",
+      "title": "帳單尚未設定"
+    },
+    "period": {
+      "current": "目前週期：{start} – {end}"
+    },
+    "manage": {
+      "hint": "你的訂閱會在每個週期結束時自動續訂。"
+    },
+    "usageTitle": "使用量"
   },
   "broadcasts": {
     "title": "廣播",

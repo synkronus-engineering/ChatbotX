@@ -345,7 +345,30 @@
       "bannerDescription": "El envío y la recepción de mensajes están en pausa hasta que mejores tu plan.",
       "bannerCta": "Mejorar",
       "createDisabled": "La creación de {feature} está desactivada hasta que mejores tu plan."
-    }
+    },
+    "status": {
+      "active": "Activo",
+      "canceled": "Cancelado",
+      "expired": "Expirado",
+      "past_due": "Pago pendiente",
+      "trial": "En prueba"
+    },
+    "upgrade": {
+      "cta": "Pasar a Pro",
+      "error": "El pago en línea no está disponible ahora. Inténtalo de nuevo en un momento.",
+      "pending": "Redirigiendo al pago…"
+    },
+    "notConfigured": {
+      "description": "El pago en línea aún no está conectado. Tu plan y sus límites siguen aplicando.",
+      "title": "Facturación aún no configurada"
+    },
+    "period": {
+      "current": "Periodo actual: {start} – {end}"
+    },
+    "manage": {
+      "hint": "Tu suscripción se renueva automáticamente al final de cada periodo."
+    },
+    "usageTitle": "Uso"
   },
   "broadcasts": {
     "title": "Difusiones",
