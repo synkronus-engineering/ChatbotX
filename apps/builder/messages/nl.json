@@ -345,7 +345,30 @@
       "bannerDescription": "Het verzenden en ontvangen van berichten is gepauzeerd totdat je je abonnement upgradet.",
       "bannerCta": "Upgraden",
       "createDisabled": "Het maken van een nieuwe {feature} is uitgeschakeld totdat je je abonnement upgradet."
-    }
+    },
+    "status": {
+      "active": "Actief",
+      "canceled": "Geannuleerd",
+      "expired": "Verlopen",
+      "past_due": "Betaling achterstand",
+      "trial": "In proefperiode"
+    },
+    "upgrade": {
+      "cta": "Upgrade naar Pro",
+      "error": "Online betalen is nu niet beschikbaar. Probeer het zo nog eens.",
+      "pending": "Doorsturen naar de betaling…"
+    },
+    "notConfigured": {
+      "description": "Online betalen is nog niet gekoppeld. Je abonnement en de bijbehorende limieten blijven geldig.",
+      "title": "Facturering is nog niet geconfigureerd"
+    },
+    "period": {
+      "current": "Huidige periode: {start} – {end}"
+    },
+    "manage": {
+      "hint": "Je abonnement wordt aan het einde van elke periode automatisch verlengd."
+    },
+    "usageTitle": "Gebruik"
   },
   "broadcasts": {
     "title": "Broadcasts",

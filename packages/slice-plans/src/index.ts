@@ -19,6 +19,8 @@ export {
   assertMemberCapacity,
   assertWorkspaceCapacity,
   type CapacityMetric,
+  type CapacityUsage,
+  getCapacitySnapshot,
   PlanCapacityError,
 } from "./service/capacity"
 export type {

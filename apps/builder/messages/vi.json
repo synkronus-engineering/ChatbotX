@@ -345,7 +345,30 @@
       "bannerDescription": "Gửi và nhận tin nhắn đã tạm dừng cho đến khi bạn nâng cấp gói.",
       "bannerCta": "Nâng cấp",
       "createDisabled": "Tạo {feature} mới đã bị vô hiệu hóa cho đến khi bạn nâng cấp gói."
-    }
+    },
+    "status": {
+      "active": "Đang hoạt động",
+      "canceled": "Đã hủy",
+      "expired": "Đã hết hạn",
+      "past_due": "Trễ hạn thanh toán",
+      "trial": "Đang dùng thử"
+    },
+    "upgrade": {
+      "cta": "Nâng cấp lên Pro",
+      "error": "Thanh toán trực tuyến hiện không khả dụng. Vui lòng thử lại sau ít phút.",
+      "pending": "Đang chuyển đến thanh toán…"
+    },
+    "notConfigured": {
+      "description": "Thanh toán trực tuyến chưa được kết nối. Gói của bạn và giới hạn của nó vẫn áp dụng.",
+      "title": "Thanh toán chưa được cấu hình"
+    },
+    "period": {
+      "current": "Kỳ hiện tại: {start} – {end}"
+    },
+    "manage": {
+      "hint": "Đăng ký của bạn tự động gia hạn vào cuối mỗi kỳ."
+    },
+    "usageTitle": "Mức sử dụng"
   },
   "broadcasts": {
     "title": "Phát sóng",

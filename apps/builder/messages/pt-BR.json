@@ -345,7 +345,30 @@
       "bannerDescription": "O envio e o recebimento de mensagens estão pausados até que você faça upgrade do plano.",
       "bannerCta": "Fazer upgrade",
       "createDisabled": "A criação de novos recursos de {feature} está desativada até que você faça upgrade do plano."
-    }
+    },
+    "status": {
+      "active": "Ativo",
+      "canceled": "Cancelado",
+      "expired": "Expirado",
+      "past_due": "Pagamento atrasado",
+      "trial": "Em teste"
+    },
+    "upgrade": {
+      "cta": "Fazer upgrade para Pro",
+      "error": "O pagamento online está indisponível no momento. Tente novamente em instantes.",
+      "pending": "Redirecionando para o pagamento…"
+    },
+    "notConfigured": {
+      "description": "O pagamento online ainda não foi conectado. Seu plano e seus limites continuam valendo.",
+      "title": "Faturamento ainda não configurado"
+    },
+    "period": {
+      "current": "Período atual: {start} – {end}"
+    },
+    "manage": {
+      "hint": "Sua assinatura é renovada automaticamente ao final de cada período."
+    },
+    "usageTitle": "Uso"
   },
   "broadcasts": {
     "title": "Transmissões",

@@ -1771,7 +1771,30 @@
       "bannerDescription": "L'invio e la ricezione dei messaggi sono sospesi finché non aggiorni il piano.",
       "bannerCta": "Aggiorna",
       "createDisabled": "La creazione di {feature} è disabilitata finché non passi a un piano superiore."
-    }
+    },
+    "status": {
+      "active": "Attivo",
+      "canceled": "Annullato",
+      "expired": "Scaduto",
+      "past_due": "Pagamento in ritardo",
+      "trial": "In prova"
+    },
+    "upgrade": {
+      "cta": "Passa a Pro",
+      "error": "Il pagamento online non è al momento disponibile. Riprova tra poco.",
+      "pending": "Reindirizzamento al pagamento…"
+    },
+    "notConfigured": {
+      "description": "Il pagamento online non è ancora collegato. Il tuo piano e i suoi limiti restano validi.",
+      "title": "Fatturazione non ancora configurata"
+    },
+    "period": {
+      "current": "Periodo corrente: {start} – {end}"
+    },
+    "manage": {
+      "hint": "Il tuo abbonamento si rinnova automaticamente alla fine di ogni periodo."
+    },
+    "usageTitle": "Utilizzo"
   },
   "broadcasts": {
     "title": "Broadcast",

@@ -345,7 +345,30 @@
       "bannerDescription": "プランをアップグレードするまで、メッセージの送受信は一時停止されます。",
       "bannerCta": "アップグレード",
       "createDisabled": "プランをアップグレードするまで、新しい{feature}は作成できません。"
-    }
+    },
+    "status": {
+      "active": "アクティブ",
+      "canceled": "キャンセル済み",
+      "expired": "期限切れ",
+      "past_due": "支払い遅延",
+      "trial": "トライアル中"
+    },
+    "upgrade": {
+      "cta": "Proにアップグレード",
+      "error": "現在オンライン決済をご利用いただけません。しばらくしてからもう一度お試しください。",
+      "pending": "決済ページへ移動しています…"
+    },
+    "notConfigured": {
+      "description": "オンライン決済はまだ接続されていません。プランとその制限は引き続き適用されます。",
+      "title": "請求設定がまだ完了していません"
+    },
+    "period": {
+      "current": "現在の期間：{start} – {end}"
+    },
+    "manage": {
+      "hint": "サブスクリプションは各期間の終了時に自動更新されます。"
+    },
+    "usageTitle": "使用状況"
   },
   "broadcasts": {
     "title": "一斉配信",

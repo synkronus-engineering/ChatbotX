@@ -7,7 +7,7 @@ import {
   inboxModel,
   messageModel,
 } from "@chatbotx.io/database/schema"
-import { workspaceMetaModel } from "@chatbotx.io/slice-tenancy"
+import { resolveEffectivePlan } from "@chatbotx.io/slice-plans"
 
 export type WorkspaceOverview = {
   chats7d: number
@@ -15,26 +15,41 @@ export type WorkspaceOverview = {
   contacts: number
   connectedChannels: number
   flows: number
-  /** Konversify plan from `ent.workspace_meta`, or null when unreadable. */
+  /**
+   * Konversify plan label (subscription-aware: trial appends the days left),
+   * or null when the billing tables are unreadable.
+   */
   plan: string | null
 }
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
 
+const DAY_MS = 24 * 60 * 60 * 1000
+
 /**
- * Read the Konversify plan badge. The `ent` schema only exists on forked
- * deployments (upstream self-hosted databases never ran the slice-tenancy
- * migrations), so a missing table degrades to "no badge" instead of failing the
- * whole dashboard.
+ * Read the Konversify plan badge from the subscription, not the static
+ * `ent.workspace_meta.plan` stamp: active/past_due/unexpired-trial grant the
+ * stored plan (trial appends the days left per the dashboard's single string
+ * slot), anything else falls back to the free floor. The `ent` schema only
+ * exists on forked deployments, so a missing table still degrades to "no
+ * badge" instead of failing the whole dashboard.
  */
 async function readWorkspacePlan(workspaceId: string): Promise<string | null> {
   try {
-    const [row] = await db
-      .select({ plan: workspaceMetaModel.plan })
-      .from(workspaceMetaModel)
-      .where(eq(workspaceMetaModel.workspaceId, workspaceId))
-      .limit(1)
-    return row?.plan ?? null
+    const state = await resolveEffectivePlan(workspaceId)
+    const planName = state.plan?.name ?? state.effectivePlanKey
+    if (!state.onTrial) {
+      return planName
+    }
+    const trialEndsAt = state.subscription?.trialEndsAt
+    if (!trialEndsAt) {
+      return planName
+    }
+    const daysLeft = Math.max(
+      0,
+      Math.ceil((trialEndsAt.getTime() - Date.now()) / DAY_MS),
+    )
+    return `${planName} (${daysLeft}d)`
   } catch {
     return null
   }

@@ -345,7 +345,30 @@
       "bannerDescription": "Afsendelse og modtagelse af beskeder er sat på pause, indtil du opgraderer dit abonnement.",
       "bannerCta": "Opgrader",
       "createDisabled": "Oprettelse af nye {feature} er deaktiveret, indtil du opgraderer dit abonnement."
-    }
+    },
+    "status": {
+      "active": "Aktiv",
+      "canceled": "Annulleret",
+      "expired": "Udløbet",
+      "past_due": "Restance",
+      "trial": "På prøve"
+    },
+    "upgrade": {
+      "cta": "Opgrader til Pro",
+      "error": "Betaling er ikke tilgængelig lige nu. Prøv igen om et øjeblik.",
+      "pending": "Viderestiller til betaling…"
+    },
+    "notConfigured": {
+      "description": "Onlinebetaling er ikke tilsluttet endnu. Din plan og dens grænser gælder stadig.",
+      "title": "Fakturering er ikke konfigureret endnu"
+    },
+    "period": {
+      "current": "Nuværende periode: {start} – {end}"
+    },
+    "manage": {
+      "hint": "Dit abonnement fornys automatisk ved udgangen af hver periode."
+    },
+    "usageTitle": "Forbrug"
   },
   "broadcasts": {
     "title": "Udsendelser",
