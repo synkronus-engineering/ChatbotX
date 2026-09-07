@@ -37,10 +37,12 @@ export {
   WebhookSignatureError,
 } from "./service/lemonsqueezy"
 export {
-  applyWebhookEvent,
   createSubscriptionOnProvision,
   expireEndedTrials,
-  recordEventOnce,
+  processWebhookEvent,
+  replayUnappliedEvents,
+  type WebhookProcessResult,
+  type WebhookProcessStatus,
 } from "./service/lifecycle"
 export {
   assertTrialNotExpired,

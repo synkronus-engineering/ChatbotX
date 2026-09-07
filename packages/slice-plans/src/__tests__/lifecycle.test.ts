@@ -1,18 +1,27 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { ParsedWebhookEvent } from "../types/providers"
 
-const { insert, update, dbSelect } = vi.hoisted(() => ({
-  insert: vi.fn(),
-  update: vi.fn(),
+const { dbTransaction, dbSelect, dbInsert, dbUpdate } = vi.hoisted(() => ({
+  dbTransaction: vi.fn(),
   dbSelect: vi.fn(),
+  dbInsert: vi.fn(),
+  dbUpdate: vi.fn(),
 }))
 
 vi.mock("@chatbotx.io/database/client", () => ({
-  db: { insert, update, select: () => dbSelect() },
+  db: {
+    transaction: (fn: (tx: unknown) => Promise<unknown>) => dbTransaction(fn),
+    select: () => dbSelect(),
+    insert: () => dbInsert(),
+    update: () => dbUpdate(),
+  },
 }))
 
-const { applyWebhookEvent, createSubscriptionOnProvision, recordEventOnce } =
-  await import("../service/lifecycle")
+const {
+  createSubscriptionOnProvision,
+  processWebhookEvent,
+  replayUnappliedEvents,
+} = await import("../service/lifecycle")
 
 const event = (
   overrides: Partial<ParsedWebhookEvent> = {},
@@ -33,174 +42,308 @@ const event = (
   ...overrides,
 })
 
-/** Captures the `.values(...)` argument and returns the chain shape each query uses. */
-function stubInsert(values: unknown[], chain: "returning" | "awaited") {
-  let captured: unknown
-  const terminal =
-    chain === "returning" ? vi.fn(async () => values) : Promise.resolve(values)
-  insert.mockImplementation((() => ({
-    values: (arg: unknown) => {
-      captured = arg
-      return chain === "returning"
-        ? { onConflictDoNothing: () => ({ returning: terminal }) }
-        : {
-            onConflictDoNothing: () => terminal,
-            onConflictDoUpdate: () => terminal,
-          }
-    },
-  })) as typeof insert)
-  return () => captured
+const RAW = "raw-body"
+
+interface TxProps {
+  /** Optional hook replacing the subscription upsert (to force apply failure). */
+  applyFn?: () => Promise<void>
+  /** Rows returned by the ls_event dedup insert (empty = conflict/duplicate). */
+  dedupInserted: unknown[]
+  /** Rows for the existing-event lookup (read when dedupInserted is empty). */
+  existingEvent?: { appliedAt: Date | null }[]
+  /** Rows for the tenant_subscription lookup by ls_subscription_id. */
+  existingSubscription?: { planKey: string; workspaceId: string }[]
 }
 
-function stubSelect(rowsByCall: unknown[][]) {
-  dbSelect.mockImplementation(() => {
-    const rows = rowsByCall.shift() ?? []
-    return {
-      from: vi.fn(() => ({
-        where: vi.fn(async () => rows),
-        orderBy: vi.fn(async () => rows),
-      })),
-    }
-  })
+function makeTx(props: TxProps) {
+  const appliedSets: { appliedAt: Date }[] = []
+  const upsertValues: unknown[] = []
+
+  const tx = {
+    insert: vi.fn(() => ({
+      values: (row: Record<string, unknown>) => {
+        if ("eventId" in row) {
+          return {
+            onConflictDoNothing: () => ({
+              returning: async () => props.dedupInserted,
+            }),
+          }
+        }
+        upsertValues.push(row)
+        return {
+          onConflictDoUpdate: () =>
+            props.applyFn ? props.applyFn() : Promise.resolve(),
+        }
+      },
+    })),
+    select: vi.fn(() => {
+      const queue = [
+        ...(props.existingEvent ?? []),
+        ...(props.existingSubscription ?? []),
+      ]
+      return {
+        from: () => ({
+          where: async () => queue.splice(0, 1),
+        }),
+      }
+    }),
+    update: vi.fn(() => ({
+      set: (arg: { appliedAt: Date }) => {
+        appliedSets.push(arg)
+        return { where: async () => [] }
+      },
+    })),
+  }
+  return { tx, appliedSets, upsertValues }
+}
+
+/** Wires db.transaction to run against the given tx shape. */
+function runWith(props: TxProps) {
+  const harness = makeTx(props)
+  dbTransaction.mockImplementation(
+    async (fn: (tx: unknown) => Promise<unknown>) => fn(harness.tx),
+  )
+  return harness
 }
 
 beforeEach(() => {
-  insert.mockReset()
-  update.mockReset()
-  // default: no plan row matches a variant, no subscription row pre-exists
-  stubSelect([])
+  dbTransaction.mockReset()
+  dbSelect.mockReset()
+  dbInsert.mockReset()
+  dbUpdate.mockReset()
 })
 
-describe("recordEventOnce", () => {
-  it("returns true on first insert", async () => {
-    stubInsert([{ eventId: "evt-1" }], "returning")
-    expect(
-      await recordEventOnce({
-        eventId: "evt-1",
-        eventName: "subscription_created",
-        workspaceId: "42",
-      }),
-    ).toBe(true)
+describe("processWebhookEvent", () => {
+  it("applies the subscription and marks the event applied atomically", async () => {
+    const harness = runWith({ dedupInserted: [{ eventId: "evt-1" }] })
+    const result = await processWebhookEvent(event(), RAW)
+    expect(result).toEqual({ status: "applied", workspaceId: "42" })
+    expect(harness.upsertValues[0]).toMatchObject({
+      planKey: "free",
+      status: "active",
+      workspaceId: "42",
+    })
+    expect(harness.appliedSets).toHaveLength(1)
+    expect(harness.appliedSets[0].appliedAt).toBeInstanceOf(Date)
   })
 
-  it("returns false when the event id already exists (replay)", async () => {
-    stubInsert([], "returning")
-    expect(
-      await recordEventOnce({
-        eventId: "evt-1",
-        eventName: "subscription_created",
-        workspaceId: "42",
-      }),
-    ).toBe(false)
-  })
-})
-
-describe("applyWebhookEvent", () => {
-  it("upserts the subscription for the custom_data workspace", async () => {
-    const getValues = stubInsert([{ workspaceId: "42" }], "awaited")
-    const result = await applyWebhookEvent(event())
-    expect(result).toEqual({ applied: true, workspaceId: "42" })
-    const values = getValues() as {
-      planKey: string
-      status: string
-      workspaceId: string
-    }
-    expect(values.workspaceId).toBe("42")
-    expect(values.status).toBe("active")
+  it("rolls the dedup row back with a failed apply (transaction rejects)", async () => {
+    const harness = runWith({
+      dedupInserted: [{ eventId: "evt-1" }],
+      applyFn: () => Promise.reject(new Error("db down")),
+    })
+    await expect(processWebhookEvent(event(), RAW)).rejects.toThrow("db down")
+    expect(harness.appliedSets).toHaveLength(0)
   })
 
-  it("resolves the workspace from ls_subscription_id when custom_data is absent", async () => {
-    const getValues = stubInsert([{ workspaceId: "77" }], "awaited")
-    stubSelect([[{ workspaceId: "77", planKey: "pro" }]])
-    const result = await applyWebhookEvent(event({ custom: undefined }))
-    expect(result.applied).toBe(true)
-    expect(result.workspaceId).toBe("77")
-    const values = getValues() as { workspaceId: string }
-    expect(values.workspaceId).toBe("77")
+  it("re-applies an identical resend after a failed first attempt", async () => {
+    // First delivery: apply explodes (route 500s, transaction rolled back).
+    runWith({
+      dedupInserted: [{ eventId: "evt-1" }],
+      applyFn: () => Promise.reject(new Error("transient")),
+    })
+    await expect(processWebhookEvent(event(), RAW)).rejects.toThrow("transient")
+
+    // LS resend: the rollback removed the dedup row, so the insert succeeds
+    // again and the apply is attempted — dedup only blocks after success.
+    const harness = runWith({ dedupInserted: [{ eventId: "evt-1" }] })
+    const result = await processWebhookEvent(event(), RAW)
+    expect(result.status).toBe("applied")
+    expect(harness.upsertValues).toHaveLength(1)
   })
 
-  it("keeps entitlement active on cancel-at-period-end", async () => {
-    const getValues = stubInsert([{ workspaceId: "42" }], "awaited")
-    await applyWebhookEvent(
-      event({
-        eventName: "subscription_cancelled",
-        attributes: {
-          status: "cancelled",
-          cancelled_at: "2026-08-30T00:00:00Z",
-        },
-      }),
-    )
-    const values = getValues() as { status: string }
-    expect(values.status).toBe("active")
+  it("answers duplicate only when a prior apply completed", async () => {
+    const harness = runWith({
+      dedupInserted: [],
+      existingEvent: [{ appliedAt: new Date("2026-08-30T00:00:00Z") }],
+    })
+    const result = await processWebhookEvent(event(), RAW)
+    expect(result).toEqual({ status: "duplicate", workspaceId: null })
+    expect(harness.upsertValues).toHaveLength(0)
   })
 
-  it("stores expired on the terminal expiry event", async () => {
-    const getValues = stubInsert([{ workspaceId: "42" }], "awaited")
-    await applyWebhookEvent(
-      event({
-        eventName: "subscription_expired",
-        attributes: {
-          status: "expired",
-          cancelled_at: "2026-08-30T00:00:00Z",
-        },
-      }),
-    )
-    const values = getValues() as { status: string }
-    expect(values.status).toBe("expired")
+  it("re-applies a resend whose earlier attempt never completed", async () => {
+    const harness = runWith({
+      dedupInserted: [],
+      existingEvent: [{ appliedAt: null }],
+    })
+    const result = await processWebhookEvent(event(), RAW)
+    expect(result.status).toBe("applied")
+    expect(harness.upsertValues).toHaveLength(1)
   })
 
-  it("skips events it does not handle", async () => {
-    const result = await applyWebhookEvent(
+  it("dead-letters unresolvable workspaces with appliedAt left null", async () => {
+    const harness = runWith({
+      dedupInserted: [{ eventId: "evt-1" }],
+      existingSubscription: [],
+    })
+    const result = await processWebhookEvent(event({ custom: undefined }), RAW)
+    expect(result).toEqual({ status: "unbound", workspaceId: null })
+    expect(harness.appliedSets).toHaveLength(0)
+  })
+
+  it("marks unhandled event names applied without touching subscriptions", async () => {
+    const harness = runWith({ dedupInserted: [{ eventId: "evt-1" }] })
+    const result = await processWebhookEvent(
       event({ eventName: "order_created" }),
+      RAW,
     )
-    expect(result).toEqual({ applied: false, workspaceId: null })
-    expect(insert).not.toHaveBeenCalled()
+    expect(result).toEqual({ status: "skipped-unhandled", workspaceId: null })
+    expect(harness.upsertValues).toHaveLength(0)
+    expect(harness.appliedSets).toHaveLength(1)
   })
 
-  it("skips when no workspace can be resolved", async () => {
-    const result = await applyWebhookEvent(event({ custom: undefined }))
-    expect(result.applied).toBe(false)
-    expect(insert).not.toHaveBeenCalled()
+  it("keeps the existing plan when the variant is unknown (never silent pro)", async () => {
+    const harness = runWith({
+      dedupInserted: [{ eventId: "evt-1" }],
+      existingSubscription: [{ planKey: "pro", workspaceId: "42" }],
+    })
+    // variant 7 maps to no plan row (none carries that ls_variant_id)
+    const result = await processWebhookEvent(event({ custom: undefined }), RAW)
+    expect(result.status).toBe("applied")
+    expect(harness.upsertValues[0]).toMatchObject({ planKey: "pro" })
+  })
+
+  it("floors to free when the variant is unknown and no row exists", async () => {
+    const harness = runWith({
+      dedupInserted: [{ eventId: "evt-1" }],
+      existingSubscription: [],
+    })
+    // workspace resolves via custom_data; no subscription row exists yet and
+    // the variant maps to no plan → free floor, never a silent pro.
+    await processWebhookEvent(event(), RAW)
+    expect(harness.upsertValues[0]).toMatchObject({ planKey: "free" })
+  })
+
+  it("drops a malformed custom workspace id instead of inserting it", async () => {
+    const harness = runWith({ dedupInserted: [{ eventId: "evt-1" }] })
+    const result = await processWebhookEvent(
+      event({ custom: { workspace_id: "not-a-number" } }),
+      RAW,
+    )
+    expect(result.status).toBe("unbound")
+    expect(harness.upsertValues).toHaveLength(0)
   })
 })
 
 describe("createSubscriptionOnProvision", () => {
-  const PRO_PLAN_ROW = {
-    key: "pro",
-    name: "Pro",
-    workspacesLimit: 10,
-    channelsLimit: 10,
-    membersLimit: 15,
-    contactsLimit: 10_000,
-    botMessagesLimit: 5000,
-    features: [],
-    monthlyPriceCents: 2900,
-    trialDays: 14,
-    lsVariantId: null,
-  }
-  const SUBSCRIPTION_ROW = {
-    workspaceId: "42",
-    planKey: "pro",
-    status: "trial",
-    trialEndsAt: new Date("2026-09-13T00:00:00Z"),
-    periodStart: null,
-    periodEnd: null,
-    lsCustomerId: null,
-    lsSubscriptionId: null,
+  it("writes a pro trial row when the plan has trial days", async () => {
+    const planQueue = [
+      [
+        {
+          key: "pro",
+          name: "Pro",
+          workspacesLimit: 10,
+          channelsLimit: 10,
+          membersLimit: 15,
+          contactsLimit: 10_000,
+          botMessagesLimit: 5000,
+          features: [],
+          monthlyPriceCents: 2900,
+          trialDays: 14,
+          lsVariantId: null,
+        },
+      ],
+      [
+        {
+          workspaceId: "42",
+          planKey: "pro",
+          status: "trial",
+          trialEndsAt: new Date("2026-09-13T00:00:00Z"),
+          periodStart: null,
+          periodEnd: null,
+          lsCustomerId: null,
+          lsSubscriptionId: null,
+        },
+      ],
+    ]
+    dbSelect.mockImplementation(() => ({
+      from: () => ({ where: async () => planQueue.shift() ?? [] }),
+    }))
+    let insertedRow: Record<string, unknown> | undefined
+    dbInsert.mockImplementation(() => ({
+      values: (row: Record<string, unknown>) => {
+        insertedRow = row
+        return { onConflictDoNothing: () => Promise.resolve() }
+      },
+    }))
+
+    const row = await createSubscriptionOnProvision("42")
+
+    expect(insertedRow).toMatchObject({ planKey: "pro", status: "trial" })
+    expect((insertedRow as { trialEndsAt: Date }).trialEndsAt).toBeInstanceOf(
+      Date,
+    )
+    expect(row?.status).toBe("trial")
+  })
+})
+
+describe("replayUnappliedEvents", () => {
+  const SWEPT_ROW = {
+    eventId: "evt-1",
+    rawPayload: JSON.stringify({
+      meta: {
+        event_name: "subscription_created",
+        custom_data: { workspace_id: "42" },
+      },
+      data: {
+        type: "subscriptions",
+        id: "sub-1",
+        attributes: { status: "active" },
+      },
+    }),
   }
 
-  it("writes a pro trial row when the plan has trial days", async () => {
-    stubSelect([[PRO_PLAN_ROW], [SUBSCRIPTION_ROW]])
-    const getValues = stubInsert([], "awaited")
-    const row = await createSubscriptionOnProvision("42")
-    const values = getValues() as {
-      planKey: string
-      status: string
-      trialEndsAt: Date | null
-    }
-    expect(values.planKey).toBe("pro")
-    expect(values.status).toBe("trial")
-    expect(values.trialEndsAt).toBeInstanceOf(Date)
-    expect(row?.status).toBe("trial")
+  it("re-parses and re-applies unapplied rows", async () => {
+    dbSelect.mockImplementation(() => ({
+      from: () => ({
+        where: () => ({
+          limit: async () => [SWEPT_ROW],
+        }),
+      }),
+    }))
+    const harness = runWith({
+      dedupInserted: [],
+      existingEvent: [{ appliedAt: null }],
+    })
+
+    const replayed = await replayUnappliedEvents()
+
+    expect(replayed).toBe(1)
+    expect(harness.upsertValues).toHaveLength(1)
+    expect(harness.appliedSets).toHaveLength(1)
+  })
+
+  it("counts an already-applied replay target as handled", async () => {
+    dbSelect.mockImplementation(() => ({
+      from: () => ({
+        where: () => ({
+          limit: async () => [SWEPT_ROW],
+        }),
+      }),
+    }))
+    runWith({
+      dedupInserted: [],
+      existingEvent: [{ appliedAt: new Date("2026-08-30T00:00:00Z") }],
+    })
+
+    const replayed = await replayUnappliedEvents()
+
+    expect(replayed).toBe(1)
+  })
+
+  it("survives unparseable rows and keeps sweeping", async () => {
+    dbSelect.mockImplementation(() => ({
+      from: () => ({
+        where: () => ({
+          limit: async () => [{ eventId: "bad", rawPayload: "not json" }],
+        }),
+      }),
+    }))
+    runWith({ dedupInserted: [] })
+
+    const replayed = await replayUnappliedEvents()
+
+    expect(replayed).toBe(0)
   })
 })

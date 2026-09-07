@@ -88,6 +88,8 @@ export interface ParsedWebhookEvent {
   raw: Record<string, unknown>
   subscriptionId?: string
   tenantId?: string
+  /** LS test-mode flag — the webhook route cross-checks LEMONSQUEEZY_MODE. */
+  testMode?: boolean
 }
 
 export interface PaymentProviderConfig {

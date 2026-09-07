@@ -140,6 +140,20 @@ describe("corrective migration (camel columns)", () => {
     expect(sql).toContain('DROP POLICY IF EXISTS "tenant_subscription_rls"')
   })
 
+  it("micro-migration adds the completion marker and raw payload (guarded)", () => {
+    const sql = readFileSync(
+      new URL(
+        "../../../database/drizzle/20260901120000_ls_event_applied_at/migration.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    )
+    expect(sql).toContain(`ADD COLUMN "appliedAt" timestamp(6) with time zone`)
+    expect(sql).toContain(`ADD COLUMN "rawPayload" text NOT NULL DEFAULT ''`)
+    expect(sql).toContain("information_schema.columns")
+    expect(sql).toContain(`CREATE INDEX IF NOT EXISTS "ls_event_unapplied_idx"`)
+  })
+
   it("rebuilds the RLS policies against the renamed column", () => {
     expect(sql.match(/CREATE POLICY/g)?.length).toBe(4)
     expect(

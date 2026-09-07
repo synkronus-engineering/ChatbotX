@@ -63,6 +63,8 @@ function queueRows(...rows: unknown[][]) {
 
 const count = (value: number) => [{ value }]
 
+const MISSING_PLAN_ERROR = /ent\.plan row missing/
+
 beforeEach(() => {
   dbSelect.mockReset()
 })
@@ -139,6 +141,14 @@ describe("capacity gates", () => {
     await expect(assertChannelCapacity("1")).rejects.toThrowError(
       PlanCapacityError,
     )
+  })
+
+  it("fails loudly when the plan row is missing (integrity break)", async () => {
+    queueRows(
+      [], // no subscription
+      [], // and no plan row — the seed is gone
+    )
+    await expect(assertChannelCapacity("1")).rejects.toThrow(MISSING_PLAN_ERROR)
   })
 
   it("passes members under the ceiling", async () => {

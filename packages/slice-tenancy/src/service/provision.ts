@@ -88,8 +88,8 @@ export const listWorkspaces = async () => {
     sql`SELECT wm."workspaceId", wm.plan, wm.locale, wm."suspendedAt",
                w.name, u.email as owner_email
         FROM ent.workspace_meta wm
-        JOIN "Workspace" w ON w.id = wm.workspace_id
-        JOIN "User" u ON u.id = w.owner_id
+        JOIN "Workspace" w ON w.id = wm."workspaceId"
+        JOIN "User" u ON u.id = w."ownerId"
         ORDER BY w.name`,
   )
   return result.rows
