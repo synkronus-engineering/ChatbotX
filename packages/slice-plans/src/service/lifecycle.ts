@@ -1,5 +1,6 @@
-import { db } from "@chatbotx.io/database/client"
-import { and, eq, lte } from "drizzle-orm"
+import { type DatabaseClient, db } from "@chatbotx.io/database/client"
+import logger from "@chatbotx.io/logger"
+import { and, eq, isNull, lte } from "drizzle-orm"
 import { PLAN_KEYS } from "../data/plans"
 import {
   lsEventModel,
@@ -8,7 +9,7 @@ import {
   tenantSubscriptionModel,
 } from "../data/schema"
 import type { ParsedWebhookEvent } from "../types/providers"
-import { mapLsStatus } from "./lemonsqueezy"
+import { mapLsStatus, parseWebhookEvent } from "./lemonsqueezy"
 import { getPlanByKey, type SubscriptionRecord } from "./plan-resolution"
 
 const HANDLED_EVENTS = new Set([
@@ -26,35 +27,19 @@ const HANDLED_EVENTS = new Set([
   "subscription_payment_refunded",
 ])
 
-/** Best-effort derived plan from the checkout's variant id (fallback when custom_data is absent). */
-async function findPlanByVariant(variantId: string) {
-  const rows = await db
+const NUMERIC_ID = /^\d+$/
+
+/** Coerces a custom_data workspace id to a numeric id string, or null when absent/malformed. */
+function numericWorkspaceId(value: string | undefined): string | null {
+  return typeof value === "string" && NUMERIC_ID.test(value) ? value : null
+}
+
+async function findPlanByVariant(tx: DatabaseClient, variantId: string) {
+  const rows = await tx
     .select()
     .from(planModel)
     .where(eq(planModel.lsVariantId, variantId))
   return rows[0] ?? null
-}
-
-/**
- * Records the event for dedup. Returns false when the event id was already
- * processed — the webhook route then answers 200 without re-applying (BaseLine's
- * `findByEventId` + UNIQUE backstop, expressed as our `ent.ls_event` PK).
- */
-export async function recordEventOnce(event: {
-  eventId: string
-  eventName: string
-  workspaceId: string | null
-}): Promise<boolean> {
-  const inserted = await db
-    .insert(lsEventModel)
-    .values({
-      eventId: event.eventId,
-      eventName: event.eventName,
-      workspaceId: event.workspaceId,
-    })
-    .onConflictDoNothing({ target: lsEventModel.eventId })
-    .returning({ eventId: lsEventModel.eventId })
-  return inserted.length > 0
 }
 
 function toDate(value: unknown): Date | null {
@@ -86,38 +71,15 @@ function effectiveStatusFrom(
 }
 
 /**
- * Applies a lifecycle event to `ent.tenant_subscription`. Status comes from
- * the payload's LS status; the plan key resolves from the variant (falling
- * back to the existing row), and the workspace from `custom_data.workspace_id`
- * (falling back to the row already carrying this LS subscription id).
+ * The subscription upsert for one resolved workspace. Runs inside the caller's
+ * transaction so a failure rolls the dedup row back with it.
  */
-export async function applyWebhookEvent(
+async function applySubscriptionUpsert(
+  tx: DatabaseClient,
   event: ParsedWebhookEvent,
-): Promise<{ applied: boolean; workspaceId: string | null }> {
-  if (!HANDLED_EVENTS.has(event.eventName)) {
-    return { applied: false, workspaceId: null }
-  }
-
-  const customWorkspaceId = event.custom?.workspace_id
-  const existingBySubscription = event.providerSubscriptionId
-    ? (
-        await db
-          .select()
-          .from(tenantSubscriptionModel)
-          .where(
-            eq(
-              tenantSubscriptionModel.lsSubscriptionId,
-              event.providerSubscriptionId,
-            ),
-          )
-      )[0]
-    : undefined
-
-  const workspaceId = customWorkspaceId ?? existingBySubscription?.workspaceId
-  if (!workspaceId) {
-    return { applied: false, workspaceId: null }
-  }
-
+  workspaceId: string,
+  existingPlanKey: string | null,
+): Promise<void> {
   const attributes = event.attributes
   const lsStatus =
     typeof attributes.status === "string" ? attributes.status : null
@@ -125,10 +87,18 @@ export async function applyWebhookEvent(
 
   let planKey: string | null = null
   if (variantId) {
-    const byVariant = await findPlanByVariant(variantId)
+    const byVariant = await findPlanByVariant(tx, variantId)
     planKey = byVariant?.key ?? null
+    if (!byVariant) {
+      // An unknown variant must never silently grant pro: keep the current
+      // plan (free floor when there is none) until the variant is mapped.
+      logger.warn(
+        { variantId, eventId: event.eventId },
+        "webhook: variant not mapped to any plan",
+      )
+    }
   }
-  planKey = planKey ?? existingBySubscription?.planKey ?? PLAN_KEYS.pro
+  planKey = planKey ?? existingPlanKey ?? PLAN_KEYS.free
 
   const status = lsStatus ? mapLsStatus(lsStatus) : "active"
   const periodStart = toDate(attributes.current_billing_period_start)
@@ -139,7 +109,7 @@ export async function applyWebhookEvent(
 
   const effectiveStatus = effectiveStatusFrom(status, cancelledAt)
 
-  await db
+  await tx
     .insert(tenantSubscriptionModel)
     .values({
       workspaceId,
@@ -159,14 +129,147 @@ export async function applyWebhookEvent(
         trialEndsAt,
         periodStart,
         periodEnd,
+        updatedAt: new Date(),
         ...(customerId ? { lsCustomerId: customerId } : {}),
         ...(event.providerSubscriptionId
           ? { lsSubscriptionId: event.providerSubscriptionId }
           : {}),
       },
     })
+}
 
-  return { applied: true, workspaceId }
+export type WebhookProcessStatus =
+  | "applied"
+  | "duplicate"
+  | "skipped-unhandled"
+  | "unbound"
+
+export interface WebhookProcessResult {
+  status: WebhookProcessStatus
+  workspaceId: string | null
+}
+
+/**
+ * Records and applies one webhook event atomically (review P0 #2).
+ *
+ * The dedup insert and the subscription apply commit together: an apply
+ * failure rolls the dedup row back too, so the route can answer 5xx and
+ * Lemon Squeezy's retry of the SAME event re-inserts and re-applies instead
+ * of hitting a "duplicate" wall. `appliedAt` is set in the same transaction;
+ * the two states where it stays NULL are (a) events for a workspace that
+ * cannot be resolved yet — dead-lettered for the replay sweep to retry once
+ * the subscription binds — and (b) nothing else, since failures roll back.
+ *
+ * A resend of an event whose row exists with `appliedAt` NULL (possible only
+ * if a committed unbound row's workspace later binds, or manual intervention)
+ * re-runs the apply inside this transaction.
+ */
+export function processWebhookEvent(
+  event: ParsedWebhookEvent,
+  rawBody: string,
+): Promise<WebhookProcessResult> {
+  return db.transaction(async (tx) => {
+    const inserted = await tx
+      .insert(lsEventModel)
+      .values({
+        eventId: event.eventId,
+        eventName: event.eventName,
+        workspaceId: numericWorkspaceId(event.custom?.workspace_id),
+        rawPayload: rawBody,
+      })
+      .onConflictDoNothing({ target: lsEventModel.eventId })
+      .returning({ eventId: lsEventModel.eventId })
+
+    if (inserted.length === 0) {
+      const [existing] = await tx
+        .select({ appliedAt: lsEventModel.appliedAt })
+        .from(lsEventModel)
+        .where(eq(lsEventModel.eventId, event.eventId))
+      if (existing?.appliedAt) {
+        return { status: "duplicate", workspaceId: null }
+      }
+    }
+
+    if (!HANDLED_EVENTS.has(event.eventName)) {
+      await markApplied(tx, event.eventId)
+      return { status: "skipped-unhandled", workspaceId: null }
+    }
+
+    const customWorkspaceId = numericWorkspaceId(event.custom?.workspace_id)
+    const existingBySubscription = event.providerSubscriptionId
+      ? (
+          await tx
+            .select()
+            .from(tenantSubscriptionModel)
+            .where(
+              eq(
+                tenantSubscriptionModel.lsSubscriptionId,
+                event.providerSubscriptionId,
+              ),
+            )
+        )[0]
+      : undefined
+
+    const workspaceId =
+      customWorkspaceId ?? existingBySubscription?.workspaceId ?? null
+    if (!workspaceId) {
+      logger.warn(
+        { eventId: event.eventId, eventName: event.eventName },
+        "webhook: no workspace binding — dead-lettered for the replay sweep",
+      )
+      return { status: "unbound", workspaceId: null }
+    }
+
+    await applySubscriptionUpsert(
+      tx,
+      event,
+      workspaceId,
+      existingBySubscription?.planKey ?? null,
+    )
+    await markApplied(tx, event.eventId)
+    return { status: "applied", workspaceId }
+  })
+}
+
+async function markApplied(tx: DatabaseClient, eventId: string): Promise<void> {
+  await tx
+    .update(lsEventModel)
+    .set({ appliedAt: new Date() })
+    .where(eq(lsEventModel.eventId, eventId))
+}
+
+/**
+ * Replay sweep for unapplied events (runs from the maintenance route):
+ * re-parses the persisted raw payload and re-runs the atomic processing.
+ * A row that still cannot bind stays NULL and is retried on the next sweep;
+ * parse failures are logged and skipped, never fatal to the sweep.
+ */
+export async function replayUnappliedEvents(limit = 100): Promise<number> {
+  const rows = await db
+    .select({
+      eventId: lsEventModel.eventId,
+      rawPayload: lsEventModel.rawPayload,
+    })
+    .from(lsEventModel)
+    .where(isNull(lsEventModel.appliedAt))
+    .limit(limit)
+
+  let replayed = 0
+  for (const row of rows) {
+    try {
+      const event = parseWebhookEvent(row.rawPayload)
+      const result = await processWebhookEvent(event, row.rawPayload)
+      if (result.status === "applied" || result.status === "duplicate") {
+        replayed += 1
+      }
+    } catch (err) {
+      logger.warn(
+        { err, eventId: row.eventId },
+        "replay sweep: event re-parse or re-apply failed",
+      )
+    }
+  }
+  return replayed
 }
 
 /**
@@ -210,7 +313,7 @@ export async function createSubscriptionOnProvision(
 }
 
 /**
- * Sweep for the expire-trials route: flips ended trials to `expired`. Purely
+ * Sweep for the maintenance route: flips ended trials to `expired`. Purely
  * a stored-status correction for UI accuracy — read-time resolution already
  * downgraded the effective plan (assertTrialNotExpired).
  */

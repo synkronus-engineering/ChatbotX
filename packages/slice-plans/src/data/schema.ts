@@ -91,6 +91,14 @@ export const lsEventModel = plansSchema.table(
       onUpdate: "cascade",
     }),
     processedAt: timestamp(timestampConfig).defaultNow().notNull(),
+    /**
+     * Set in the same transaction as the subscription apply. NULL marks an
+     * event the replay sweep must re-evaluate (apply never finished, or the
+     * workspace could not be resolved when the event arrived).
+     */
+    appliedAt: timestamp(timestampConfig),
+    /** Verbatim raw body — the digest input and the sweep's re-parse source. */
+    rawPayload: text().notNull().default(""),
   },
   (table) => [uniqueIndex("ls_event_event_id_key").on(table.eventId)],
 )

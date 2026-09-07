@@ -1,9 +1,32 @@
+import { timingSafeEqual } from "node:crypto"
+import type { NextRequest } from "next/server"
 import { NextResponse } from "next/server"
 import { Pool } from "pg"
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 
-export async function GET() {
+const SECRET_HEADER = "x-console-secret"
+
+/**
+ * Timing-safe shared-secret gate. Unset secrets fail closed (401) so an
+ * unconfigured console is unreachable rather than open.
+ */
+function authorize(req: NextRequest): boolean {
+  const expected = process.env.CONSOLE_API_SECRET
+  const provided = req.headers.get(SECRET_HEADER) ?? ""
+  if (!expected) {
+    console.error("console api: CONSOLE_API_SECRET is not configured")
+    return false
+  }
+  const a = Buffer.from(expected)
+  const b = Buffer.from(provided)
+  return a.length === b.length && timingSafeEqual(a, b)
+}
+
+export async function GET(req: NextRequest): Promise<NextResponse> {
+  if (!authorize(req)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const { rows } = await pool.query(
       `SELECT wm."workspaceId"::text AS workspace_id, w.name, u.email as owner_email,
@@ -14,12 +37,18 @@ export async function GET() {
        ORDER BY w.name`,
     )
     return NextResponse.json(rows)
-  } catch {
-    return NextResponse.json([])
+  } catch (err) {
+    // A silent [] here would read as "no tenants" and hide real breakage.
+    console.error("console api: listing workspaces failed", err)
+    return NextResponse.json({ error: "Listing failed" }, { status: 500 })
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest): Promise<NextResponse> {
+  if (!authorize(req)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
   const client = await pool.connect()
   try {
     const { name, ownerEmail, plan = "free", locale = "es" } = await req.json()
@@ -30,11 +59,16 @@ export async function POST(req: Request) {
       )
     }
 
+    // Workspace + member + meta is one unit: a failure between the inserts
+    // would strand a Workspace with no owner membership.
+    await client.query("BEGIN")
+
     const { rows: users } = await client.query(
       `SELECT id::text FROM "User" WHERE email = $1 LIMIT 1`,
       [ownerEmail],
     )
     if (users.length === 0) {
+      await client.query("ROLLBACK")
       return NextResponse.json(
         { error: `Owner ${ownerEmail} not found` },
         { status: 404 },
@@ -47,6 +81,7 @@ export async function POST(req: Request) {
       [ownerId],
     )
     if (existing.length > 0) {
+      await client.query("ROLLBACK")
       return NextResponse.json({ workspaceId: existing[0].id, created: false })
     }
 
@@ -98,12 +133,12 @@ export async function POST(req: Request) {
       [workspaceId, plan, locale],
     )
 
+    await client.query("COMMIT")
     return NextResponse.json({ workspaceId, created: true })
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Provisioning failed" },
-      { status: 500 },
-    )
+    await client.query("ROLLBACK").catch(() => undefined)
+    console.error("console api: provisioning failed", err)
+    return NextResponse.json({ error: "Provisioning failed" }, { status: 500 })
   } finally {
     client.release()
   }

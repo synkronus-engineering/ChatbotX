@@ -1,4 +1,5 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto"
+import logger from "@chatbotx.io/logger"
 import { type SubscriptionStatus, subscriptionStatuses } from "../data/schema"
 import { keys } from "../keys"
 import type { ParsedWebhookEvent } from "../types/providers"
@@ -64,7 +65,10 @@ export function mapLsStatus(status: string): SubscriptionStatus {
     case "expired":
       return "expired"
     default:
-      return "active"
+      // Fail closed on vocabulary drift: an unrecognized LS status keeps the
+      // dunning/grace bucket, never a silent entitlement grant.
+      logger.warn({ status }, "lemonsqueezy: unknown subscription status")
+      return "past_due"
   }
 }
 
@@ -130,6 +134,7 @@ export function parseWebhookEvent(rawBody: string): ParsedWebhookEvent {
     eventId,
     eventName,
     eventCreatedAt: createdAt,
+    testMode: payload.meta?.test_mode,
     providerSubscriptionId,
     providerCustomerId: attributeString(attributes, "customer_id"),
     providerOrderId: attributeString(attributes, "order_id"),

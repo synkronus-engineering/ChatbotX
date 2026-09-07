@@ -1,4 +1,5 @@
 import { workspaceService } from "@chatbotx.io/business"
+import { ChatbotXException } from "@chatbotx.io/business/errors"
 import {
   createLsCheckout,
   getPlanByKey,
@@ -43,7 +44,19 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     )
   }
 
-  const workspace = await workspaceService.findById({ id: workspaceId })
+  const workspace = await workspaceService
+    .findById({ id: workspaceId })
+    .catch((err: unknown) => {
+      // notFoundException for a bogus/unknown id — surface as 404, not a
+      // route-level 500.
+      if (err instanceof ChatbotXException) {
+        return null
+      }
+      throw err
+    })
+  if (!workspace) {
+    return NextResponse.json({ error: "Workspace not found" }, { status: 404 })
+  }
   if (workspace.ownerId !== userId) {
     return NextResponse.json(
       { error: "Only the workspace owner can start a checkout" },

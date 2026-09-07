@@ -8,6 +8,7 @@ import {
 import { and, count, countDistinct, eq, ne } from "drizzle-orm"
 import {
   type EffectivePlanState,
+  type PlanRecord,
   resolveEffectivePlan,
   resolveFreePlanState,
 } from "./plan-resolution"
@@ -60,6 +61,20 @@ async function countOwnedWorkspaces(ownerId: string): Promise<number> {
 }
 
 /**
+ * A missing ent.plan row means billing integrity is broken (seed absent,
+ * table dropped). Gates fail LOUD here — treating it as unlimited would let
+ * every creation path run unmetered (review silent #5).
+ */
+function requirePlan(state: EffectivePlanState): PlanRecord {
+  if (!state.plan) {
+    throw new Error(
+      "slice-plans: ent.plan row missing — capacity gate failing closed",
+    )
+  }
+  return state.plan
+}
+
+/**
  * Workspace-count gate (audit V4): the owner's plan ceiling vs how many
  * workspaces they already own. Called from `workspaceService.insertWorkspace`
  * next to the vendor `tryConsume` gate, and re-checked by the provision route
@@ -67,10 +82,7 @@ async function countOwnedWorkspaces(ownerId: string): Promise<number> {
  */
 export async function assertWorkspaceCapacity(ownerId: string): Promise<void> {
   const state = await resolveOwnerPlanState(ownerId)
-  const limit = state.plan?.workspacesLimit
-  if (limit === null || limit === undefined) {
-    return
-  }
+  const limit = requirePlan(state).workspacesLimit
   const owned = await countOwnedWorkspaces(ownerId)
   if (owned >= limit) {
     throw new PlanCapacityError("workspaces")
@@ -82,10 +94,7 @@ export async function assertChannelCapacity(
   workspaceId: string,
 ): Promise<void> {
   const state = await resolveEffectivePlan(workspaceId)
-  const limit = state.plan?.channelsLimit
-  if (limit === null || limit === undefined) {
-    return
-  }
+  const limit = requirePlan(state).channelsLimit
   const used = await countConnectedChannels(workspaceId)
   if (used >= limit) {
     throw new PlanCapacityError("channels")
@@ -95,10 +104,7 @@ export async function assertChannelCapacity(
 /** Team-member gate (audit V6) — mirrors the invite/accept vendor checks. */
 export async function assertMemberCapacity(workspaceId: string): Promise<void> {
   const state = await resolveEffectivePlan(workspaceId)
-  const limit = state.plan?.membersLimit
-  if (limit === null || limit === undefined) {
-    return
-  }
+  const limit = requirePlan(state).membersLimit
   const used = await countWorkspaceMembers(workspaceId)
   if (used >= limit) {
     throw new PlanCapacityError("members")

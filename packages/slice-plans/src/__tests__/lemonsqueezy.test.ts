@@ -63,13 +63,14 @@ describe("verifyWebhookSignature", () => {
 })
 
 describe("parseWebhookEvent", () => {
-  it("reads event name, ids and custom_data", () => {
+  it("reads event name, ids, custom_data and test_mode", () => {
     const event = parseWebhookEvent(
       subscriptionPayload({
         customData: { workspace_id: "42" },
         webhookId: "evt-99",
       }),
     )
+    expect(event.testMode).toBeUndefined()
     expect(event.eventId).toBe("evt-99")
     expect(event.eventName).toBe("subscription_created")
     expect(event.providerSubscriptionId).toBe("sub-1")
@@ -121,5 +122,9 @@ describe("mapLsStatus", () => {
     expect(mapLsStatus("cancelled")).toBe("canceled")
     expect(mapLsStatus("canceled")).toBe("canceled")
     expect(mapLsStatus("expired")).toBe("expired")
+  })
+
+  it("fails closed to past_due on an unrecognized status", () => {
+    expect(mapLsStatus("some-future-status")).toBe("past_due")
   })
 })
