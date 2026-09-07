@@ -94,6 +94,10 @@ export async function mintWorkspaceAccessToken(
       `Access-token TTL must not exceed ${DEFAULT_ACCESS_TOKEN_TTL_SECONDS}s`,
     )
   }
+  if (ttlSeconds !== undefined && ttlSeconds < 1) {
+    // A zero/negative TTL would mint an already-expired token; floor at 1s.
+    throw new Error("Access-token TTL must be at least 1 second")
+  }
 
   // `overrideOptions` shallow-merges over the plugin options, so a TTL override
   // must restate the full `jwt` block or issuer/audience would be lost.

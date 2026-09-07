@@ -45,15 +45,22 @@ const {
   }
 })
 
-vi.mock("@chatbotx.io/slice-plans", () => {
-  class PlanCapacityError extends Error {}
+const { planCapacityMocks, MockPlanCapacityError } = vi.hoisted(() => {
+  class MockPlanCapacityError extends Error {}
   return {
-    PlanCapacityError,
-    assertChannelCapacity: vi.fn(async () => undefined),
-    assertMemberCapacity: vi.fn(async () => undefined),
-    assertWorkspaceCapacity: vi.fn(async () => undefined),
+    MockPlanCapacityError,
+    planCapacityMocks: {
+      assertChannelCapacity: vi.fn(async () => undefined),
+      assertMemberCapacity: vi.fn(async () => undefined),
+      assertWorkspaceCapacity: vi.fn(async () => undefined),
+    },
   }
 })
+
+vi.mock("@chatbotx.io/slice-plans", () => ({
+  PlanCapacityError: MockPlanCapacityError,
+  ...planCapacityMocks,
+}))
 vi.mock("@/lib/safe-action", () => {
   const chain: Record<string, unknown> = {}
   chain.bindArgsSchemas = () => chain
@@ -240,6 +247,20 @@ describe("inviteWorkspaceMemberAction", () => {
     )
 
     expect(mockQuotaHasReachedLimit).not.toHaveBeenCalled()
+    expect(mockDbInsert).not.toHaveBeenCalled()
+  })
+
+  test("throws the team-member limit error when the ent-plan gate blocks", async () => {
+    mockCurrentMember()
+    planCapacityMocks.assertMemberCapacity.mockRejectedValueOnce(
+      new MockPlanCapacityError("members"),
+    )
+
+    await expect(
+      (inviteWorkspaceMemberAction as (props: unknown) => Promise<unknown>)(
+        actionCtx(),
+      ),
+    ).rejects.toThrow("Team member limit reached for this workspace plan")
     expect(mockDbInsert).not.toHaveBeenCalled()
   })
 

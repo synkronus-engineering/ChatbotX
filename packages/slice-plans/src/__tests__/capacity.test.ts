@@ -119,6 +119,73 @@ describe("getCapacitySnapshot", () => {
   })
 })
 
+describe("getCapacitySnapshot — ceiling math", () => {
+  const FREE_PLAN_ROW = {
+    ...FREE_PLAN,
+  }
+  const PRO_TRIAL_FREE_WS = {
+    workspaceId: "1",
+    planKey: "free",
+    status: "active",
+    trialEndsAt: null,
+    periodStart: null,
+    periodEnd: null,
+    lsCustomerId: null,
+    lsSubscriptionId: null,
+  }
+  const PRO_TRIAL_PRO_WS = {
+    ...PRO_TRIAL_FREE_WS,
+    workspaceId: "2",
+    planKey: "pro",
+  }
+
+  it("uses the BEST workspace ceiling the owner holds (pro beats free)", async () => {
+    queueRows(
+      [{ id: "1" }, { id: "2" }], // owned workspaces
+      [PRO_TRIAL_FREE_WS], // ws1 subscription (free)
+      [FREE_PLAN_ROW], // ws1 plan
+      [PRO_TRIAL_PRO_WS], // ws2 subscription (pro trial)
+      [PRO_PLAN], // ws2 plan — workspacesLimit 10
+      [PRO_TRIAL_PRO_WS], // target workspace subscription
+      [PRO_PLAN], // target plan
+      count(2), // owned count
+      count(1), // channels
+      count(3), // members
+    )
+
+    const snapshot = await getCapacitySnapshot({
+      ownerId: "user-1",
+      workspaceId: "2",
+    })
+
+    expect(snapshot).toEqual([
+      { metric: "workspaces", limit: 10, used: 2 },
+      { metric: "channels", limit: 10, used: 1 },
+      { metric: "members", limit: 15, used: 3 },
+    ])
+  })
+
+  it("keeps snapshot entries null-limited when the plan row is missing (page filters them)", async () => {
+    queueRows(
+      [{ id: "1" }], // owned
+      [PRO_TRIAL_FREE_WS], // subscription
+      [], // plan row MISSING
+      [PRO_TRIAL_FREE_WS],
+      [], // target plan missing too
+      count(1),
+      count(0),
+      count(1),
+    )
+
+    const snapshot = await getCapacitySnapshot({
+      ownerId: "user-1",
+      workspaceId: "1",
+    })
+
+    expect(snapshot.every((entry) => entry.limit === null)).toBe(true)
+  })
+})
+
 describe("capacity gates", () => {
   it("blocks the workspace metric at the owner's plan ceiling", async () => {
     queueRows(

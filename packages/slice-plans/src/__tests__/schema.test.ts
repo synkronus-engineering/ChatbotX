@@ -154,12 +154,11 @@ describe("corrective migration (camel columns)", () => {
     expect(sql).toContain(`CREATE INDEX IF NOT EXISTS "ls_event_unapplied_idx"`)
   })
 
-  it("rebuilds the RLS policies against the renamed column", () => {
+  it("rebuilds the RLS policies against the renamed column, guarded", () => {
     expect(sql.match(/CREATE POLICY/g)?.length).toBe(4)
-    expect(
-      sql.match(
-        /"workspaceId" = current_setting\('app\.workspace_id', true\)::bigint/g,
-      )?.length,
-    ).toBe(8)
+    expect(sql.match(/"workspaceId" = current_setting/g)?.length).toBe(8)
+    // Each policy rebuild is relation-guarded so the migration no-ops on
+    // databases where the ent tables never existed.
+    expect(sql.match(/information_schema\.tables/g)?.length).toBe(4)
   })
 })

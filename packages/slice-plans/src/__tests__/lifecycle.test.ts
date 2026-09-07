@@ -215,6 +215,53 @@ describe("processWebhookEvent", () => {
     expect(harness.upsertValues[0]).toMatchObject({ planKey: "free" })
   })
 
+  it("maps a known variant to its plan, overriding the existing row's plan", async () => {
+    const harness = runWith({
+      dedupInserted: [{ eventId: "evt-1" }],
+      // existing subscription row (free) is looked up first, then the
+      // variant lookup resolves to the pro plan row.
+      existingSubscription: [{ planKey: "free", workspaceId: "42" }],
+    })
+    const PRO_ROW = { key: "pro", lsVariantId: "7" }
+    // The queue must live OUTSIDE the select implementation — a fresh queue
+    // per call would hand every lookup the same first row.
+    type LookupRow =
+      | { appliedAt: Date | null }
+      | { planKey: string; workspaceId: string }
+    const queue: LookupRow[][] = [
+      [{ planKey: "free", workspaceId: "42" }],
+      [PRO_ROW as unknown as LookupRow],
+    ]
+    harness.tx.select.mockImplementation(() => ({
+      from: () => ({ where: async () => queue.shift() ?? [] }),
+    }))
+
+    const result = await processWebhookEvent(event(), RAW)
+
+    expect(result.status).toBe("applied")
+    expect(harness.upsertValues[0]).toMatchObject({ planKey: "pro" })
+  })
+
+  it("applies subscription_plan_changed with the new variant's plan", async () => {
+    const harness = runWith({ dedupInserted: [{ eventId: "evt-1" }] })
+    const PRO_ROW = { key: "pro", lsVariantId: "7" }
+    type LookupRow =
+      | { appliedAt: Date | null }
+      | { planKey: string; workspaceId: string }
+    const queue: LookupRow[][] = [[], [PRO_ROW as unknown as LookupRow]]
+    harness.tx.select.mockImplementation(() => ({
+      from: () => ({ where: async () => queue.shift() ?? [] }),
+    }))
+
+    const result = await processWebhookEvent(
+      event({ eventName: "subscription_plan_changed" }),
+      RAW,
+    )
+
+    expect(result.status).toBe("applied")
+    expect(harness.upsertValues[0]).toMatchObject({ planKey: "pro" })
+  })
+
   it("drops a malformed custom workspace id instead of inserting it", async () => {
     const harness = runWith({ dedupInserted: [{ eventId: "evt-1" }] })
     const result = await processWebhookEvent(

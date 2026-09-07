@@ -35,32 +35,6 @@ export const ProviderTransactionStatus = {
 export type ProviderTransactionStatus =
   (typeof ProviderTransactionStatus)[keyof typeof ProviderTransactionStatus]
 
-/**
- * Abstract event taxonomy (dotted). Lemon Squeezy sends snake_case names
- * (`subscription_created`); the adapter's dispatch switch matches the raw
- * names — that switch, not this map, is the source of truth for handling.
- */
-export const WebhookEventType = {
-  SUBSCRIPTION_CREATED: "subscription.created",
-  SUBSCRIPTION_ACTIVATED: "subscription.activated",
-  SUBSCRIPTION_PAUSED: "subscription.paused",
-  SUBSCRIPTION_RESUMED: "subscription.resumed",
-  SUBSCRIPTION_CANCELLED: "subscription.cancelled",
-  SUBSCRIPTION_EXPIRED: "subscription.expired",
-  SUBSCRIPTION_RENEWAL_SOON: "subscription.renewal_soon",
-  SUBSCRIPTION_ITEM_ADDED: "subscription.item.added",
-  SUBSCRIPTION_ITEM_UPDATED: "subscription.item.updated",
-  SUBSCRIPTION_ITEM_REMOVED: "subscription.item.removed",
-  PAYMENT_SUCCEEDED: "payment.succeeded",
-  PAYMENT_FAILED: "payment.failed",
-  PAYMENT_REFUNDED: "payment.refunded",
-  INVOICE_CREATED: "invoice.created",
-  INVOICE_PAID: "invoice.paid",
-  INVOICE_PAYMENT_FAILED: "invoice.payment_failed",
-} as const
-export type WebhookEventType =
-  (typeof WebhookEventType)[keyof typeof WebhookEventType]
-
 export type ProrationMode =
   | "create_prorations"
   | "no_prorations"
@@ -86,8 +60,6 @@ export interface ParsedWebhookEvent {
   providerOrderId?: string
   providerSubscriptionId?: string
   raw: Record<string, unknown>
-  subscriptionId?: string
-  tenantId?: string
   /** LS test-mode flag — the webhook route cross-checks LEMONSQUEEZY_MODE. */
   testMode?: boolean
 }
@@ -124,24 +96,4 @@ export interface ProviderSubscription {
   providerStatus?: string
   status: ProviderSubscriptionStatus
   trialEnd?: Date
-}
-
-export interface WebhookEvent {
-  data: Record<string, unknown>
-  id: string
-  provider: PaymentProviderType
-  rawPayload: string
-  signature: string
-  subscriptionId?: string
-  timestamp: Date
-  transactionId?: string
-  type: WebhookEventType
-}
-
-export interface WebhookProcessingResult {
-  error?: string
-  eventType: WebhookEventType
-  message?: string
-  subscriptionId?: string
-  success: boolean
 }

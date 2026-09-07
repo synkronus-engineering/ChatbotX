@@ -12,15 +12,22 @@ const mocks = vi.hoisted(() => ({
   count: vi.fn(),
 }))
 
-vi.mock("@chatbotx.io/slice-plans", () => {
-  class PlanCapacityError extends Error {}
+const { planCapacityMocks, MockPlanCapacityError } = vi.hoisted(() => {
+  class MockPlanCapacityError extends Error {}
   return {
-    PlanCapacityError,
-    assertChannelCapacity: vi.fn(async () => undefined),
-    assertMemberCapacity: vi.fn(async () => undefined),
-    assertWorkspaceCapacity: vi.fn(async () => undefined),
+    MockPlanCapacityError,
+    planCapacityMocks: {
+      assertChannelCapacity: vi.fn(async () => undefined),
+      assertMemberCapacity: vi.fn(async () => undefined),
+      assertWorkspaceCapacity: vi.fn(async () => undefined),
+    },
   }
 })
+
+vi.mock("@chatbotx.io/slice-plans", () => ({
+  PlanCapacityError: MockPlanCapacityError,
+  ...planCapacityMocks,
+}))
 vi.mock("@chatbotx.io/database/client", () => ({
   db: {
     query: {
@@ -225,6 +232,28 @@ describe("InboxService.create", () => {
     await expect(createInbox.catch((err) => err)).resolves.toBeInstanceOf(
       ChatbotXException,
     )
+    expect(mocks.inboxInsert).not.toHaveBeenCalled()
+  })
+
+  test("throws channelLimitReached when the ent-plan gate blocks", async () => {
+    mocks.inboxFindFirst.mockResolvedValue(undefined)
+    quotaEnforcementService.tryConsume.mockResolvedValue({ ok: true })
+    planCapacityMocks.assertChannelCapacity.mockRejectedValueOnce(
+      new MockPlanCapacityError("channels"),
+    )
+
+    const createInbox = inboxService.create({
+      data: {
+        workspaceId: "workspace-1",
+        channel: "whatsapp",
+        name: "WhatsApp",
+      } as never,
+      ownerId: "owner-1",
+    })
+
+    await expect(createInbox).rejects.toMatchObject({
+      code: "channelLimitReached",
+    })
     expect(mocks.inboxInsert).not.toHaveBeenCalled()
   })
 

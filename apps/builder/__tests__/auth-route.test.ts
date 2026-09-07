@@ -64,6 +64,10 @@ vi.mock("@/lib/auth-redirect", () => ({
     response,
 }))
 
+vi.mock("@/lib/log", () => ({
+  logger: { warn: vi.fn() },
+}))
+
 async function loadRoute() {
   vi.resetModules()
   return await import("@/app/api/auth/[...all]/route")
@@ -131,5 +135,141 @@ describe("auth route — white-label relay", () => {
     expect(mockGetSocialAuthForTenant).not.toHaveBeenCalled()
     expect(defaultHandler).toHaveBeenCalledTimes(1)
     expect(await response.text()).toBe("default")
+  })
+})
+
+type NextRouteRequest = Parameters<
+  typeof import("@/app/api/auth/[...all]/route").OPTIONS
+>[0]
+const asNextRequest = (req: Request): NextRouteRequest =>
+  req as unknown as NextRouteRequest
+
+describe("auth route — CORS (withAuthCors + preflight)", () => {
+  const LANDING = "https://konversify.app"
+  const EVIL = "https://evil.example"
+
+  async function loadForCors() {
+    vi.resetModules()
+    vi.unstubAllEnvs()
+    vi.stubEnv("NEXT_PUBLIC_BUILDER_URL", `https://${PLATFORM_HOST}`)
+    vi.stubEnv("AUTH_TRUSTED_LANDING_URL", LANDING)
+    return await import("@/app/api/auth/[...all]/route")
+  }
+
+  test("a trusted origin gets ACAO + ACAC + appended Vary on POST responses", async () => {
+    const { POST } = await loadForCors()
+    const response = await POST(
+      new Request(`https://${PLATFORM_HOST}/api/auth/sign-in/email`, {
+        method: "POST",
+        headers: { origin: LANDING },
+      }),
+    )
+
+    expect(response.headers.get("Access-Control-Allow-Origin")).toBe(LANDING)
+    expect(response.headers.get("Access-Control-Allow-Credentials")).toBe(
+      "true",
+    )
+    expect(response.headers.get("vary")).toContain("Origin")
+    // Body and status pass through the reconstruction untouched.
+    expect(response.status).toBe(200)
+    expect(await response.text()).toBe("default")
+  })
+
+  test("set-cookie survives the CORS reconstruction", async () => {
+    defaultHandler.mockImplementationOnce(
+      () =>
+        new Response("ok", {
+          headers: { "set-cookie": "better-auth.session_token=t; Path=/" },
+        }),
+    )
+    const { POST } = await loadForCors()
+    const response = await POST(
+      new Request(`https://${PLATFORM_HOST}/api/auth/sign-in/email`, {
+        method: "POST",
+        headers: { origin: LANDING },
+      }),
+    )
+
+    expect(response.headers.get("set-cookie")).toContain(
+      "better-auth.session_token=t",
+    )
+    expect(response.headers.get("Access-Control-Allow-Origin")).toBe(LANDING)
+  })
+
+  test("an untrusted origin gets NO CORS headers", async () => {
+    const { POST } = await loadForCors()
+    const response = await POST(
+      new Request(`https://${PLATFORM_HOST}/api/auth/sign-in/email`, {
+        method: "POST",
+        headers: { origin: EVIL },
+      }),
+    )
+
+    expect(response.headers.get("Access-Control-Allow-Origin")).toBeNull()
+    expect(response.headers.get("Access-Control-Allow-Credentials")).toBeNull()
+  })
+
+  test("Origin:null is not trusted", async () => {
+    const { POST } = await loadForCors()
+    const response = await POST(
+      new Request(`https://${PLATFORM_HOST}/api/auth/sign-in/email`, {
+        method: "POST",
+        headers: { origin: "null" },
+      }),
+    )
+
+    expect(response.headers.get("Access-Control-Allow-Origin")).toBeNull()
+  })
+
+  test("a request without an Origin header is same-origin: no CORS headers", async () => {
+    const { POST } = await loadForCors()
+    const response = await POST(
+      new Request(`https://${PLATFORM_HOST}/api/auth/sign-in/email`, {
+        method: "POST",
+      }),
+    )
+
+    expect(response.headers.get("Access-Control-Allow-Origin")).toBeNull()
+  })
+
+  test("OPTIONS from an untrusted origin is rejected with 403", async () => {
+    const { logger } = await import("@/lib/log")
+    const { OPTIONS } = await loadForCors()
+    const response = await OPTIONS(
+      asNextRequest(
+        new Request(`https://${PLATFORM_HOST}/api/auth/sign-in/email`, {
+          method: "OPTIONS",
+          headers: { origin: EVIL },
+        }),
+      ),
+    )
+
+    expect(response.status).toBe(403)
+    expect(logger.warn).toHaveBeenCalled()
+  })
+
+  test("OPTIONS from a trusted origin gets 204 and echoes the requested headers", async () => {
+    const { OPTIONS } = await loadForCors()
+    const response = await OPTIONS(
+      asNextRequest(
+        new Request(`https://${PLATFORM_HOST}/api/auth/sign-in/email`, {
+          method: "OPTIONS",
+          headers: {
+            origin: LANDING,
+            "access-control-request-headers": "content-type, x-custom",
+          },
+        }),
+      ),
+    )
+
+    expect(response.status).toBe(204)
+    expect(response.headers.get("Access-Control-Allow-Origin")).toBe(LANDING)
+    expect(response.headers.get("Access-Control-Allow-Credentials")).toBe(
+      "true",
+    )
+    expect(response.headers.get("Access-Control-Allow-Headers")).toBe(
+      "content-type, x-custom",
+    )
+    expect(response.headers.get("vary")).toContain("Origin")
   })
 })

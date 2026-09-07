@@ -5,11 +5,14 @@
 -- every model-driven query against ent.* failed live with 42703 (e.g.
 -- INSERT INTO ent.ls_event ("eventId", ...) — column does not exist).
 --
--- Rename-only: prod already seeded ent.plan; no re-seed, no data changes.
+-- Renames only touch data layout: prod already seeded ent.plan, no re-seed.
 -- Original migration files stay untouched (fresh installs run originals then
 -- this corrective, ending at the same camelCase state).
--- Each rename is guarded so the migration is idempotent and safe on databases
--- where the ent schema or a specific table never existed (upstream installs).
+-- Idempotency is per-guard, not blanket: each rename no-ops when the snake
+-- column is already gone; each policy rebuild runs only when its table exists
+-- and drops/recreates in one guarded block, so a partial prior application
+-- converges instead of failing (the renames themselves are not atomic across
+-- tables).
 
 -- ─── ent.workspace_meta ────────────────────────────────────────────
 DO $$
@@ -171,31 +174,60 @@ BEGIN
 END
 $$;--> statement-breakpoint
 
--- RLS policies: rebuilt to reference the renamed column (rename does not
--- rewrite policy expressions; drop + recreate, guarded). The unique index
+-- RLS policies: rebuilt to reference the renamed column (a rename does not
+-- rewrite policy expressions). Each rebuild is relation-guarded (no-op when
+-- the table never existed) and idempotent (drop + recreate inside one block,
+-- so re-running after a partial application converges). The unique index
 -- ls_event_event_id_key follows the renamed column automatically.
 
-DROP POLICY IF EXISTS "workspace_meta_rls" ON "ent"."workspace_meta";--> statement-breakpoint
-DROP POLICY IF EXISTS "isolation_probe_rls" ON "ent"."isolation_probe";--> statement-breakpoint
-DROP POLICY IF EXISTS "tenant_subscription_rls" ON "ent"."tenant_subscription";--> statement-breakpoint
-DROP POLICY IF EXISTS "tenant_usage_rls" ON "ent"."tenant_usage";--> statement-breakpoint
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables
+             WHERE table_schema = 'ent' AND table_name = 'workspace_meta') THEN
+    EXECUTE 'DROP POLICY IF EXISTS "workspace_meta_rls" ON "ent"."workspace_meta"';
+    EXECUTE 'CREATE POLICY "workspace_meta_rls" ON "ent"."workspace_meta"
+        FOR ALL
+        USING ("workspaceId" = current_setting(''app.workspace_id'', true)::bigint)
+        WITH CHECK ("workspaceId" = current_setting(''app.workspace_id'', true)::bigint)';
+  END IF;
+END
+$$;--> statement-breakpoint
 
-CREATE POLICY "workspace_meta_rls" ON "ent"."workspace_meta"
-    FOR ALL
-    USING ("workspaceId" = current_setting('app.workspace_id', true)::bigint)
-    WITH CHECK ("workspaceId" = current_setting('app.workspace_id', true)::bigint);--> statement-breakpoint
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables
+             WHERE table_schema = 'ent' AND table_name = 'isolation_probe') THEN
+    EXECUTE 'DROP POLICY IF EXISTS "isolation_probe_rls" ON "ent"."isolation_probe"';
+    EXECUTE 'CREATE POLICY "isolation_probe_rls" ON "ent"."isolation_probe"
+        FOR ALL
+        USING ("workspaceId" = current_setting(''app.workspace_id'', true)::bigint)
+        WITH CHECK ("workspaceId" = current_setting(''app.workspace_id'', true)::bigint)';
+  END IF;
+END
+$$;--> statement-breakpoint
 
-CREATE POLICY "isolation_probe_rls" ON "ent"."isolation_probe"
-    FOR ALL
-    USING ("workspaceId" = current_setting('app.workspace_id', true)::bigint)
-    WITH CHECK ("workspaceId" = current_setting('app.workspace_id', true)::bigint);--> statement-breakpoint
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables
+             WHERE table_schema = 'ent' AND table_name = 'tenant_subscription') THEN
+    EXECUTE 'DROP POLICY IF EXISTS "tenant_subscription_rls" ON "ent"."tenant_subscription"';
+    EXECUTE 'CREATE POLICY "tenant_subscription_rls" ON "ent"."tenant_subscription"
+        FOR ALL
+        USING ("workspaceId" = current_setting(''app.workspace_id'', true)::bigint)
+        WITH CHECK ("workspaceId" = current_setting(''app.workspace_id'', true)::bigint)';
+  END IF;
+END
+$$;--> statement-breakpoint
 
-CREATE POLICY "tenant_subscription_rls" ON "ent"."tenant_subscription"
-    FOR ALL
-    USING ("workspaceId" = current_setting('app.workspace_id', true)::bigint)
-    WITH CHECK ("workspaceId" = current_setting('app.workspace_id', true)::bigint);--> statement-breakpoint
-
-CREATE POLICY "tenant_usage_rls" ON "ent"."tenant_usage"
-    FOR ALL
-    USING ("workspaceId" = current_setting('app.workspace_id', true)::bigint)
-    WITH CHECK ("workspaceId" = current_setting('app.workspace_id', true)::bigint);
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables
+             WHERE table_schema = 'ent' AND table_name = 'tenant_usage') THEN
+    EXECUTE 'DROP POLICY IF EXISTS "tenant_usage_rls" ON "ent"."tenant_usage"';
+    EXECUTE 'CREATE POLICY "tenant_usage_rls" ON "ent"."tenant_usage"
+        FOR ALL
+        USING ("workspaceId" = current_setting(''app.workspace_id'', true)::bigint)
+        WITH CHECK ("workspaceId" = current_setting(''app.workspace_id'', true)::bigint)';
+  END IF;
+END
+$$;

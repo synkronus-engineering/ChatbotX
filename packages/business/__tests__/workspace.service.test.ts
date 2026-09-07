@@ -21,15 +21,22 @@ const db = {
   $count: countWorkspaces,
   query: { userModel: { findFirst: findFirstUser } },
 }
-vi.mock("@chatbotx.io/slice-plans", () => {
-  class PlanCapacityError extends Error {}
+const { planCapacityMocks, MockPlanCapacityError } = vi.hoisted(() => {
+  class MockPlanCapacityError extends Error {}
   return {
-    PlanCapacityError,
-    assertChannelCapacity: vi.fn(async () => undefined),
-    assertMemberCapacity: vi.fn(async () => undefined),
-    assertWorkspaceCapacity: vi.fn(async () => undefined),
+    MockPlanCapacityError,
+    planCapacityMocks: {
+      assertChannelCapacity: vi.fn(async () => undefined),
+      assertMemberCapacity: vi.fn(async () => undefined),
+      assertWorkspaceCapacity: vi.fn(async () => undefined),
+    },
   }
 })
+
+vi.mock("@chatbotx.io/slice-plans", () => ({
+  PlanCapacityError: MockPlanCapacityError,
+  ...planCapacityMocks,
+}))
 vi.mock("@chatbotx.io/database/client", () => ({
   db,
   eq: vi.fn((field: unknown, value: unknown) => ({ field, value })),
@@ -279,6 +286,19 @@ describe("WorkspaceService.create — community workspace limit", () => {
     })
 
     expect(runExclusive.mock.calls[0][0].key).toBe("workspace-limit:owner-9")
+  })
+
+  test("rejects with workspaceLimitReached when the ent-plan gate blocks", async () => {
+    isCommunity.mockReturnValue(false)
+    planCapacityMocks.assertWorkspaceCapacity.mockRejectedValueOnce(
+      new MockPlanCapacityError("workspaces"),
+    )
+
+    await expect(workspaceService.create(createInput())).rejects.toMatchObject({
+      code: "workspaceLimitReached",
+    })
+    expect(insert).not.toHaveBeenCalled()
+    expect(quotaEnforcementService.tryConsume).not.toHaveBeenCalled()
   })
 
   test("skips the limit entirely off community", async () => {

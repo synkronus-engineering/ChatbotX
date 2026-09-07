@@ -12,6 +12,7 @@ import { auth } from "@/lib/auth/auth"
 
 import { getSocialAuthForTenant } from "@/lib/auth/auth-instances"
 import { rewriteAuthRedirectToPublicHost } from "@/lib/auth-redirect"
+import { logger } from "@/lib/log"
 import { resolveRelayTarget } from "@/lib/oauth-referer"
 
 /**
@@ -179,14 +180,15 @@ export const POST = handle
  * CORS preflight for cross-origin auth (landing sign-in at konversify.app).
  * Routing OPTIONS into better-auth's handler did not answer the preflight —
  * Next returned its own 404 — so answer it explicitly: allow the request
- * only from the same static origins the auth instance trusts (broker,
- * builder, optional landing), echoing the requested headers. better-auth's
- * origin middleware adds ACAO to the actual POST/GET responses; only the
- * preflight leg needed this.
+ * only from the same static origins withAuthCors above decorates (broker,
+ * builder, optional landing), echoing the requested headers — the POST/GET
+ * legs get their ACAO/ACAC from that wrapper, so only the preflight leg
+ * needed this explicit answer. Untrusted origins are logged and rejected.
  */
 export function OPTIONS(request: NextRequest): NextResponse {
   const origin = request.headers.get("origin") ?? ""
   if (!trustedAuthOrigins().has(origin)) {
+    logger.warn({ origin }, "auth preflight rejected an untrusted origin")
     return new NextResponse(null, { status: 403 })
   }
   return new NextResponse(null, {

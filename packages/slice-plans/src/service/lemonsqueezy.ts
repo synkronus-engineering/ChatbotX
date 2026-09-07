@@ -138,7 +138,6 @@ export function parseWebhookEvent(rawBody: string): ParsedWebhookEvent {
     providerSubscriptionId,
     providerCustomerId: attributeString(attributes, "customer_id"),
     providerOrderId: attributeString(attributes, "order_id"),
-    tenantId: undefined,
     custom: payload.meta?.custom_data,
     attributes,
     raw: payload as Record<string, unknown>,
