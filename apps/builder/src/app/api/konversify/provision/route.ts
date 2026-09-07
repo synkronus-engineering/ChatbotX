@@ -65,7 +65,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       name: businessName,
     })
 
-    await createSubscriptionOnProvision(result.workspaceId)
+    // A null return means the pro plan row is missing — the workspace exists
+    // but carries no entitlement (free floor). Loud, never silent.
+    const subscription = await createSubscriptionOnProvision(result.workspaceId)
+    if (!subscription) {
+      logger.warn(
+        { workspaceId: result.workspaceId },
+        "konversify provision: no tenant_subscription row created (plan row missing?)",
+      )
+    }
 
     return NextResponse.json({
       workspaceId: result.workspaceId,

@@ -14,15 +14,22 @@ const mocks = vi.hoisted(() => ({
   purgeWorkspaceHeavyData: vi.fn(),
 }))
 
-vi.mock("@chatbotx.io/slice-plans", () => {
-  class PlanCapacityError extends Error {}
+const { planCapacityMocks, MockPlanCapacityError } = vi.hoisted(() => {
+  class MockPlanCapacityError extends Error {}
   return {
-    PlanCapacityError,
-    assertChannelCapacity: vi.fn(async () => undefined),
-    assertMemberCapacity: vi.fn(async () => undefined),
-    assertWorkspaceCapacity: vi.fn(async () => undefined),
+    MockPlanCapacityError,
+    planCapacityMocks: {
+      assertChannelCapacity: vi.fn(async () => undefined),
+      assertMemberCapacity: vi.fn(async () => undefined),
+      assertWorkspaceCapacity: vi.fn(async () => undefined),
+    },
   }
 })
+
+vi.mock("@chatbotx.io/slice-plans", () => ({
+  PlanCapacityError: MockPlanCapacityError,
+  ...planCapacityMocks,
+}))
 vi.mock("@chatbotx.io/analytics", () => ({
   anchoredPeriod: vi.fn(() => ({ start: new Date(), end: new Date() })),
   macRepository: { ensureWorkspaceMac: vi.fn(async () => undefined) },

@@ -206,7 +206,7 @@ jobs:
           tags: |
             ${{ env.DOCKER_REGISTRY }}/${{ needs.prepare-metadata.outputs.image_namespace }}/${{ matrix.image }}:main
           labels: ${{ needs.prepare-metadata.outputs.labels }}
-          # Per-leg scope: the five matrix legs otherwise share one unscoped GHA
+          # Per-leg scope: the matrix legs would otherwise all share one unscoped GHA
           # cache namespace and evict each other against the 10GB LRU budget.
           # mode=min (not max): `max` exports every intermediate layer of every
           # stage — "preparing build cache for export" alone cost 236.8s of a
@@ -240,7 +240,7 @@ jobs:
             ${{ env.DOCKER_REGISTRY }}/${{ needs.prepare-metadata.outputs.image_namespace }}/${{ matrix.image }}:${{ needs.prepare-metadata.outputs.version }}
             ${{ env.DOCKER_REGISTRY }}/${{ needs.prepare-metadata.outputs.image_namespace }}/${{ matrix.image }}:latest
           labels: ${{ needs.prepare-metadata.outputs.labels }}
-          # Per-leg scope: the five matrix legs otherwise share one unscoped GHA
+          # Per-leg scope: the matrix legs would otherwise all share one unscoped GHA
           # cache namespace and evict each other against the 10GB LRU budget.
           # mode=min (not max): `max` exports every intermediate layer of every
           # stage — "preparing build cache for export" alone cost 236.8s of a

@@ -23,10 +23,11 @@ COPY --from=deps /app/apps/landing/node_modules ./apps/landing/node_modules
 COPY --from=deps /app/packages ./packages
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-# NEXT_PUBLIC_* vars inline at build time in client bundles — a runtime
-# /config.js cannot reach the auth client's baseURL. This image is the
-# production artifact for the single Konversify deployment, so the public
-# origins are baked here (local dev runs via pnpm with its own .env).
+# NEXT_PUBLIC_* values inline at build time in client bundles, so the baked
+# origins below are the FALLBACK: the runtime /config.js route (rendered from
+# the server env on each request) is the source of truth and overrides them
+# wherever it loads. Baking the production origins means the fallback is
+# already correct if /config.js ever fails to load.
 ENV NEXT_PUBLIC_BUILDER_URL="https://my.konversify.app"
 ENV NEXT_PUBLIC_SITE_URL="https://konversify.app"
 WORKDIR /app/apps/landing

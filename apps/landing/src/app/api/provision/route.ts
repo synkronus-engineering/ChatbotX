@@ -33,7 +33,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       status: upstream.status,
       headers: { "content-type": "application/json" },
     })
-  } catch {
+  } catch (err) {
+    console.error("landing provision proxy: upstream request failed", err)
     return NextResponse.json(
       { error: "Provisioning unavailable" },
       {

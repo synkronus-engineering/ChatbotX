@@ -1,15 +1,22 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, test, vi } from "vitest"
 
-vi.mock("@chatbotx.io/slice-plans", () => {
-  class PlanCapacityError extends Error {}
+const { planCapacityMocks, MockPlanCapacityError } = vi.hoisted(() => {
+  class MockPlanCapacityError extends Error {}
   return {
-    PlanCapacityError,
-    assertChannelCapacity: vi.fn(async () => undefined),
-    assertMemberCapacity: vi.fn(async () => undefined),
-    assertWorkspaceCapacity: vi.fn(async () => undefined),
+    MockPlanCapacityError,
+    planCapacityMocks: {
+      assertChannelCapacity: vi.fn(async () => undefined),
+      assertMemberCapacity: vi.fn(async () => undefined),
+      assertWorkspaceCapacity: vi.fn(async () => undefined),
+    },
   }
 })
+
+vi.mock("@chatbotx.io/slice-plans", () => ({
+  PlanCapacityError: MockPlanCapacityError,
+  ...planCapacityMocks,
+}))
 vi.mock("@/lib/safe-action", () => ({
   authActionClient: {
     inputSchema: () => ({
@@ -137,6 +144,17 @@ describe("acceptInvitationAction", () => {
       expiresAt: futureDate(),
       permissions: { superAdmin: false },
     })
+  })
+
+  test("throws the team-member limit error when the ent-plan gate blocks", async () => {
+    planCapacityMocks.assertMemberCapacity.mockRejectedValueOnce(
+      new MockPlanCapacityError("members"),
+    )
+
+    await expect(invoke()).rejects.toThrow(
+      "Team member limit reached for this workspace plan",
+    )
+    expect(workspaceMemberServiceCreate).not.toHaveBeenCalled()
   })
 
   test("inserts the new member and invalidates both the user's and workspace's member-list caches", async () => {
