@@ -23,6 +23,11 @@ function authorize(req: NextRequest): boolean {
   return a.length === b.length && timingSafeEqual(a, b)
 }
 
+// The secret-gated handlers read the DB per request; without this, Next
+// prerenders GET at build time and serves a static response that bypasses
+// the auth check entirely.
+export const dynamic = "force-dynamic"
+
 export async function GET(req: NextRequest): Promise<NextResponse> {
   if (!authorize(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
